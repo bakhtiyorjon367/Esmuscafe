@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Esmuscafe Restaurant Platform
 
 A full-stack restaurant platform built with Ionic (React), Nest.js, and MongoDB.
@@ -280,3 +281,7 @@ Esmuscafe/
 - Consider adding image upload functionality instead of URL-based images
 - Add pagination for products when restaurants have many items
 - The previous Next.js PWA frontend is archived in `frontend-next/` if needed
+=======
+# Esmuscafe
+This is PWA project for restaurants
+>>>>>>> 092630d570d533f795d837a002ecd4f52d8deddb
