@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 /**
  * Computes and ticks down the remaining "ready in" minutes for a product.
@@ -14,15 +14,15 @@ export function useReadyCountdown(
   readyAt: number | null | undefined,
   updatedAt: string | undefined,
 ): number | null {
-  const computeRemaining = (): number | null => {
+  const computeRemaining = useCallback((): number | null => {
     if (!readyAt || readyAt <= 0 || !updatedAt) return null;
     const elapsedMs = Date.now() - new Date(updatedAt).getTime();
     const elapsedMinutes = Math.floor(elapsedMs / 60_000);
     const remaining = readyAt - elapsedMinutes;
     return remaining > 0 ? remaining : null;
-  };
+  }, [readyAt, updatedAt]);
 
-  const [remaining, setRemaining] = useState<number | null>(computeRemaining);
+  const [remaining, setRemaining] = useState<number | null>(() => computeRemaining());
 
   useEffect(() => {
     if (!readyAt || readyAt <= 0 || !updatedAt) {
@@ -39,7 +39,7 @@ export function useReadyCountdown(
     }, 30_000);
 
     return () => clearInterval(interval);
-  }, [readyAt, updatedAt]);
+  }, [readyAt, updatedAt, computeRemaining]);
 
   return remaining;
 }

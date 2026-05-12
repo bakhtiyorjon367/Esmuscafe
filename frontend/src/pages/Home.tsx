@@ -17,7 +17,7 @@ import { useHistory } from 'react-router-dom';
 import RestaurantCard from '@/components/RestaurantCard';
 import api from '@/lib/api';
 import { isAuthenticated, getProfile, getTokenRole } from '@/lib/auth';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 import type { Restaurant } from '@/types';
 
 const Home: React.FC = () => {
@@ -38,7 +38,7 @@ const Home: React.FC = () => {
         })
         .catch(() => {});
     }
-  }, []);
+  }, [loggedIn, history]);
 
   const fetchRestaurants = () => {
     api.get('/restaurants')

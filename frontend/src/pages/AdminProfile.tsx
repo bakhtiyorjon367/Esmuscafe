@@ -13,6 +13,7 @@ import {
   IonToast,
 } from '@ionic/react';
 import api from '@/lib/api';
+import { isAxiosError } from 'axios';
 import { getProfile, removeToken } from '@/lib/auth';
 import type { User } from '@/types';
 
@@ -28,13 +29,13 @@ const AdminProfile: React.FC = () => {
 
   useEffect(() => {
     getProfile()
-      .then((u: any) => {
+      .then((u) => {
         setUser(u);
         setForm({ nickname: u.nickname ?? '', name: u.name ?? '', password: '' });
       })
       .catch(() => history.replace('/login'))
       .finally(() => setLoading(false));
-  }, []);
+  }, [history]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,8 +50,11 @@ const AdminProfile: React.FC = () => {
       setForm((f) => ({ ...f, password: '' }));
       setToastMsg('Credentials updated successfully');
       setShowToast(true);
-    } catch (err: any) {
-      setToastMsg(err?.response?.data?.message ?? 'Failed to update credentials');
+    } catch (err: unknown) {
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      setToastMsg(msg ?? 'Failed to update credentials');
       setShowToast(true);
     } finally {
       setSaving(false);

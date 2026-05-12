@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
+import { useHistory } from 'react-router-dom';
 import {
   IonAlert,
   IonContent,
@@ -21,9 +21,10 @@ import {
   IonChip,
   IonSpinner,
 } from '@ionic/react';
-import { arrowBackOutline, trashOutline, addOutline, storefrontOutline, closeOutline, personOutline } from 'ionicons/icons';
+import { arrowBackOutline, trashOutline, addOutline, closeOutline, personOutline } from 'ionicons/icons';
 import ProductListItem from '@/components/ProductListItem';
 import api from '@/lib/api';
+import { isAxiosError } from 'axios';
 import { getProfile, removeToken } from '@/lib/auth';
 import type { Product, User } from '@/types';
 
@@ -60,7 +61,6 @@ const EMPTY_FORM: ProductFormData = {
 
 const DashboardProducts: React.FC = () => {
   const history = useHistory();
-  const location = useLocation();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
@@ -105,8 +105,11 @@ const DashboardProducts: React.FC = () => {
       setNewCategoryName('');
       const res = await api.get(`/categories?restaurantId=${user.restaurantId}`);
       setCategories(res.data ?? []);
-    } catch (err: any) {
-      alert(err?.response?.data?.message ?? 'Failed to add category');
+    } catch (err: unknown) {
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      alert(msg ?? 'Failed to add category');
     } finally {
       setCatLoading(false);
     }

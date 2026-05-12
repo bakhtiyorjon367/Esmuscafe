@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { IonSpinner } from '@ionic/react';
 import { getToken, removeToken, getProfile } from '@/lib/auth';
-import type { User } from '@/types';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -14,33 +13,35 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireAuth }) =
   const [loading, setLoading] = useState(requireAuth);
   const [allowed, setAllowed] = useState(!requireAuth);
 
-  if (!requireAuth) return <>{children}</>;
-
   useEffect(() => {
+    if (!requireAuth) {
+      setLoading(false);
+      setAllowed(true);
+      return;
+    }
+
     const check = async () => {
       const token = getToken();
-      if (requireAuth && !token) {
+      if (!token) {
         history.replace('/login');
         setLoading(false);
         return;
       }
-      if (token) {
-        try {
-          await getProfile();
-        } catch {
-          removeToken();
-          if (requireAuth) {
-            history.replace('/login');
-            setLoading(false);
-            return;
-          }
-        }
+      try {
+        await getProfile();
+      } catch {
+        removeToken();
+        history.replace('/login');
+        setLoading(false);
+        return;
       }
       setAllowed(true);
       setLoading(false);
     };
     check();
   }, [requireAuth, history]);
+
+  if (!requireAuth) return <>{children}</>;
 
   if (loading && requireAuth) {
     return (

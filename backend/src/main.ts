@@ -7,7 +7,8 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.useGlobalInterceptors(new LoggingInterceptor());
 
-  // Enable CORS for frontend (localhost + any local network IP so iPhone/tablet work)
+  // Local dev + LAN (iPhone on same Wi‑Fi). Production: set CORS_ORIGINS (comma‑separated), e.g.
+  // CORS_ORIGINS=http://3.38.75.140:8080,https://yourdomain.com
   const localOrigin = (o: string) =>
     o === 'http://localhost:3000' ||
     o === 'http://localhost:3002' ||
@@ -15,9 +16,21 @@ async function bootstrap() {
     /^http:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(o) ||
     /^http:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(o) ||
     /^http:\/\/172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}(:\d+)?$/.test(o);
+
+  const corsOriginsExtra = (process.env.CORS_ORIGINS ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
+  const isAllowedOrigin = (origin: string | undefined): boolean => {
+    if (!origin) return true;
+    if (localOrigin(origin)) return true;
+    return corsOriginsExtra.includes(origin);
+  };
+
   app.enableCors({
     origin: (origin, callback) => {
-      if (!origin || localOrigin(origin)) {
+      if (isAllowedOrigin(origin)) {
         callback(null, true);
       } else {
         callback(new Error('Not allowed by CORS'));

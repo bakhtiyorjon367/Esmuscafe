@@ -12,7 +12,8 @@ import {
   IonSpinner,
 } from '@ionic/react';
 import { arrowBackOutline, addOutline, removeOutline, trashOutline } from 'ionicons/icons';
-import { useCart, getProductId, getProductName, getProductImage, getEffectivePrice } from '../context/CartContext';
+import { useCart } from '../context/useCart';
+import { getProductId, getProductName, getProductImage, getEffectivePrice } from '@/lib/cartItem';
 import type { Product } from '@/types';
 
 const Cart: React.FC = () => {
@@ -21,7 +22,7 @@ const Cart: React.FC = () => {
 
   useEffect(() => {
     refreshCart();
-  }, []);
+  }, [refreshCart]);
 
   const items = cart?.items ?? [];
 

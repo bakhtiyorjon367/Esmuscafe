@@ -19,7 +19,7 @@ import { useParams, useHistory } from 'react-router-dom';
 import ProductListItem from '@/components/ProductListItem';
 import api from '@/lib/api';
 import { isAuthenticated, getTokenRole } from '@/lib/auth';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 import type { Restaurant, Product } from '@/types';
 
 const CATEGORY_ALL = 'All';

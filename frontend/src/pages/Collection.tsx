@@ -17,7 +17,7 @@ import api from '@/lib/api';
 import { getTokenRole } from '@/lib/auth';
 import type { Product, Restaurant } from '@/types';
 import ProductListItem from '@/components/ProductListItem';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
 
 const Collection: React.FC = () => {
   const history = useHistory();

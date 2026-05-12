@@ -1,20 +1,9 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { Cart, CartItem, Product } from '../types';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import type { Cart, CartItem } from '../types';
 import * as cartApi from '../lib/cart';
 import { isAuthenticated } from '../lib/auth';
-
-interface CartContextValue {
-  cart: Cart | null;
-  totalItems: number;
-  loading: boolean;
-  addItem: (productId: string, quantity?: number) => Promise<void>;
-  updateItem: (productId: string, quantity: number) => void;
-  removeItem: (productId: string) => void;
-  clear: () => Promise<void>;
-  refreshCart: () => Promise<void>;
-}
-
-const CartContext = createContext<CartContextValue | null>(null);
+import { getProductId } from '../lib/cartItem';
+import { CartContext } from './cartReactContext';
 
 const CART_STORAGE_KEY = 'esmuscafe_cart';
 /** Debounce delay in ms before syncing quantity changes to server */
@@ -102,7 +91,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     applyLocalUpdate((prev) => ({
       ...prev,
       items: prev.items.map((item) => {
-        const id = typeof item.productId === 'string' ? item.productId : (item.productId as Product)._id;
+        const id = getProductId(item);
         return id === productId ? { ...item, quantity } : item;
       }),
     }));
@@ -137,7 +126,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     // Instant local remove
     applyLocalUpdate((prev) => {
       const items = prev.items.filter((item) => {
-        const id = typeof item.productId === 'string' ? item.productId : (item.productId as Product)._id;
+        const id = getProductId(item);
         return id !== productId;
       });
       return { ...prev, items, restaurantId: items.length === 0 ? null : prev.restaurantId };
@@ -169,36 +158,3 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     </CartContext.Provider>
   );
 };
-
-export function useCart(): CartContextValue {
-  const ctx = useContext(CartContext);
-  if (!ctx) throw new Error('useCart must be used within CartProvider');
-  return ctx;
-}
-
-export function getProductId(item: CartItem): string {
-  if (typeof item.productId === 'string') return item.productId;
-  return (item.productId as Product)._id;
-}
-
-export function getProductName(item: CartItem): string {
-  if (typeof item.productId === 'object' && item.productId !== null) {
-    return (item.productId as Product).name;
-  }
-  return 'Unknown';
-}
-
-export function getProductImage(item: CartItem): string {
-  if (typeof item.productId === 'object' && item.productId !== null) {
-    return (item.productId as Product).image;
-  }
-  return '';
-}
-
-export function getEffectivePrice(item: CartItem): number {
-  if (typeof item.productId === 'object' && item.productId !== null) {
-    const p = item.productId as Product;
-    return p.discount > 0 ? p.price - p.discount : p.price;
-  }
-  return item.priceSnapshot;
-}

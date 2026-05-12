@@ -28,8 +28,18 @@ import {
   logOutOutline,
 } from 'ionicons/icons';
 import api from '@/lib/api';
+import { isAxiosError } from 'axios';
 import { getProfile, removeToken } from '@/lib/auth';
 import type { User, UserAddress, WorkingHours } from '@/types';
+
+function apiErrorMessage(err: unknown, fallback: string): string {
+  if (!isAxiosError(err)) return fallback;
+  const data = err.response?.data;
+  if (data && typeof data === 'object' && 'message' in data && typeof (data as { message: unknown }).message === 'string') {
+    return (data as { message: string }).message;
+  }
+  return fallback;
+}
 
 interface MyComment {
   _id: string;
@@ -42,10 +52,13 @@ type SectionKey = 'account' | 'status' | 'hours' | 'restaurant';
 
 const defaultWorkingHours = (): WorkingHours => ({ open: '09:00', close: '22:00' });
 
-const sanitizeWorkingHours = (raw: any): WorkingHours => ({
-  open: raw?.open ?? '09:00',
-  close: raw?.close ?? '22:00',
-});
+const sanitizeWorkingHours = (raw: unknown): WorkingHours => {
+  const o = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  return {
+    open: typeof o.open === 'string' ? o.open : '09:00',
+    close: typeof o.close === 'string' ? o.close : '22:00',
+  };
+};
 
 const fieldLabelStyle: React.CSSProperties = {
   display: 'block',
@@ -184,7 +197,7 @@ const MyProfile: React.FC = () => {
       }
     };
     init();
-  }, []);
+  }, [history]);
 
   // ─── Account save ─────────────────────────────────────────────────────────
   const handleSaveAccount = async (e: React.FormEvent) => {
@@ -205,8 +218,8 @@ const MyProfile: React.FC = () => {
       setAccountForm((f) => ({ ...f, newPassword: '', confirmPassword: '' }));
       showMsg('Account updated!');
       setOpenSection(null);
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to update account');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to update account'));
     } finally {
       setSavingAccount(false);
     }
@@ -218,8 +231,8 @@ const MyProfile: React.FC = () => {
     if (!restaurantIdRef.current) return;
     try {
       await api.patch(`/restaurants/${restaurantIdRef.current}`, { isOpened: checked });
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to update status');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to update status'));
     }
   };
 
@@ -230,8 +243,8 @@ const MyProfile: React.FC = () => {
     if (!restaurantIdRef.current) return;
     try {
       await api.patch(`/restaurants/${restaurantIdRef.current}`, { workingHours: updated });
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to update working hours');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to update working hours'));
     }
   };
 
@@ -244,8 +257,8 @@ const MyProfile: React.FC = () => {
       await api.patch(`/restaurants/${restaurantId}`, restaurantForm);
       showMsg('Restaurant info updated!');
       setOpenSection(null);
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to update restaurant');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to update restaurant'));
     } finally {
       setSavingRestaurant(false);
     }
@@ -269,8 +282,8 @@ const MyProfile: React.FC = () => {
       setShowAddressModal(false);
       setAddressForm({ address: '' });
       setEditingAddressIndex(null);
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to save address');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to save address'));
     } finally {
       setSavingAddress(false);
     }
@@ -280,8 +293,8 @@ const MyProfile: React.FC = () => {
     try {
       const res = await api.delete(`/users/me/addresses/${index}`);
       setAddresses(res.data);
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to delete address');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to delete address'));
     }
   };
 
@@ -311,8 +324,8 @@ const MyProfile: React.FC = () => {
     try {
       await api.delete(`/products/${productId}/comments/${comment._id}`);
       setComments((prev) => prev.filter((c) => c._id !== comment._id));
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to delete review');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to delete review'));
     }
   };
 
@@ -328,8 +341,8 @@ const MyProfile: React.FC = () => {
       removeToken();
       localStorage.removeItem('esmuscafe_cart');
       history.replace('/login');
-    } catch (err: any) {
-      showMsg(err?.response?.data?.message ?? 'Failed to delete account');
+    } catch (err: unknown) {
+      showMsg(apiErrorMessage(err, 'Failed to delete account'));
     }
   };
 

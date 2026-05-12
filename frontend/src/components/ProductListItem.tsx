@@ -3,9 +3,11 @@ import { useHistory } from 'react-router-dom';
 import { IonBadge, IonIcon } from '@ionic/react';
 import { heart, heartOutline, chatbubbleOutline, addCircle, checkmarkCircle, createOutline, trashOutline } from 'ionicons/icons';
 import type { Product } from '@/types';
-import { useCart } from '../context/CartContext';
+import { useCart } from '../context/useCart';
+import { getProductId } from '@/lib/cartItem';
 import { isAuthenticated } from '../lib/auth';
 import api from '../lib/api';
+import { isAxiosError } from 'axios';
 import { useReadyCountdown, formatReadyAt } from '../hooks/useReadyCountdown';
 
 interface OwnerActions {
@@ -42,7 +44,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, restaurantId
       const uid = r.data.id;
       setLiked(Array.isArray(product.likes) && product.likes.includes(uid));
     }).catch(() => {});
-  }, [product._id, loggedIn, ownerActions]);
+  }, [product._id, product.likes, loggedIn, ownerActions]);
 
   const finalPrice = product.price - (product.discount || 0);
   const remainingMinutes = useReadyCountdown(product.readyAt, product.updatedAt);
@@ -79,10 +81,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, restaurantId
 
   const cartQuantity = (() => {
     if (!cart) return 0;
-    const item = cart.items.find((i) => {
-      const id = typeof i.productId === 'string' ? i.productId : (i.productId as any)._id;
-      return id === product._id;
-    });
+    const item = cart.items.find((i) => getProductId(i) === product._id);
     return item?.quantity ?? 0;
   })();
 
@@ -93,8 +92,11 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, restaurantId
     try {
       await addItem(product._id);
       triggerFlyAnimation();
-    } catch (err: any) {
-      alert(err?.response?.data?.message ?? 'Could not add to cart');
+    } catch (err: unknown) {
+      const msg = isAxiosError(err)
+        ? (err.response?.data as { message?: string } | undefined)?.message
+        : undefined;
+      alert(msg ?? 'Could not add to cart');
     }
   };
 

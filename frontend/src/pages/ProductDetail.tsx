@@ -21,10 +21,10 @@ import {
   IonSelectOption,
   IonChip,
 } from '@ionic/react';
-import { heart, heartOutline, sendOutline, trashOutline, createOutline, addOutline, arrowBackOutline } from 'ionicons/icons';
+import { heart, heartOutline, sendOutline, trashOutline, createOutline, arrowBackOutline } from 'ionicons/icons';
 import api from '@/lib/api';
 import { isAuthenticated } from '@/lib/auth';
-import type { Product, Comment, User } from '@/types';
+import type { Product, Comment, User, Restaurant } from '@/types';
 import { useReadyCountdown, formatReadyAt } from '@/hooks/useReadyCountdown';
 
 function timeAgo(dateStr: string): string {
@@ -47,6 +47,10 @@ const EMPTY_FORM: ProductFormData = {
   name: '', description: '', ingredients: '', price: 0, discount: 0,
   image: '', category: '', isAvailable: true, readyAt: '', tags: [],
 };
+
+function restaurantIdString(rid: Product['restaurantId']): string {
+  return typeof rid === 'object' && rid !== null ? (rid as Restaurant)._id : rid;
+}
 
 const ProductDetail: React.FC = () => {
   const { restaurantId, productId } = useParams<{ restaurantId: string; productId: string }>();
@@ -74,26 +78,27 @@ const ProductDetail: React.FC = () => {
   useEffect(() => {
     const init = async () => {
       try {
-        const requests: Promise<any>[] = [
-          api.get(`/products/${productId}`),
-          api.get(`/products/${productId}/comments`),
-        ];
-        if (loggedIn) requests.push(api.get('/auth/profile'));
-        const results = await Promise.all(requests);
-        const [productRes, commentsRes, profileRes] = results;
+        const [productRes, commentsRes] = await Promise.all([
+          api.get<Product>(`/products/${productId}`),
+          api.get<Comment[]>(`/products/${productId}/comments`),
+        ]);
         const p = productRes.data;
         setProduct(p);
         setLikeCount(p.likeCount ?? 0);
         setComments(commentsRes.data);
-        if (profileRes) {
-          const u: User = profileRes.data;
+
+        if (loggedIn) {
+          const profileRes = await api.get<User>('/auth/profile');
+          const u = profileRes.data;
           setMyUser(u);
           setLiked(Array.isArray(p.likes) && p.likes.includes(u.id));
           if (u.role === 'restaurant_owner' && u.restaurantId) {
-            api.get(`/categories?restaurantId=${u.restaurantId}`)
+            api.get<CategoryItem[]>(`/categories?restaurantId=${u.restaurantId}`)
               .then((r) => setCategories(r.data ?? []))
               .catch(() => {});
           }
+        } else {
+          setMyUser(null);
         }
       } catch {
         // ignore
@@ -106,7 +111,7 @@ const ProductDetail: React.FC = () => {
 
   const isOwner = myUser?.role === 'restaurant_owner' &&
     product &&
-    String(typeof product.restaurantId === 'object' ? (product.restaurantId as any)._id : product.restaurantId) === myUser.restaurantId;
+    restaurantIdString(product.restaurantId) === myUser.restaurantId;
 
   const handleLike = async () => {
     if (!loggedIn) { history.replace(`/login?redirect=${encodeURIComponent(history.location.pathname)}`); return; }
@@ -361,7 +366,8 @@ const ProductDetail: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingBottom: 32 }}>
               {comments.map((c) => {
                 const author = typeof c.userId === 'object' ? c.userId : null;
-                const authorId = typeof c.userId === 'object' ? (c.userId as any)._id : c.userId;
+                const authorId =
+                  typeof c.userId === 'object' && c.userId !== null ? c.userId._id : c.userId;
                 const isOwn = myUser && authorId === myUser.id;
                 return (
                   <div key={c._id} style={{ background: 'var(--ion-color-light)', borderRadius: 10, padding: '10px 14px' }}>
