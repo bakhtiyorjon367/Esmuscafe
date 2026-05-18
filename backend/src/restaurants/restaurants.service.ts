@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { mkdir } from 'fs/promises';
+import * as path from 'path';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import sharp from 'sharp';
 import { Restaurant, RestaurantDocument } from './schemas/restaurant.schema';
 import { CreateRestaurantWithOwnerDto } from './dto/create-restaurant-with-owner.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
 import { Role } from '../libs/enums/role.enum';
 import { UsersService } from '../users/users.service';
+import {
+  getRestaurantsUploadAbsoluteDir,
+  RESTAURANT_UPLOAD_PUBLIC_PREFIX,
+} from '../libs/restaurant-upload.paths';
 
 @Injectable()
 export class RestaurantsService {
@@ -109,5 +117,60 @@ export class RestaurantsService {
 
   async findByOwnerId(ownerId: string): Promise<Restaurant | null> {
     return this.restaurantModel.findOne({ ownerId }).exec();
+  }
+
+  private assertCanUpdateRestaurant(
+    restaurant: RestaurantDocument,
+    user: { role: Role; userId?: string },
+  ): void {
+    if (user.role !== Role.ADMIN && restaurant.ownerId.toString() !== user.userId?.toString()) {
+      throw new ForbiddenException('You do not have permission to update this restaurant');
+    }
+  }
+
+  async uploadImage(
+    restaurantId: string,
+    file: Express.Multer.File,
+    user: { role: Role; userId?: string },
+  ): Promise<{ url: string }> {
+    if (!file?.buffer?.length) {
+      throw new BadRequestException('No image file');
+    }
+
+    const restaurant = await this.restaurantModel.findById(restaurantId);
+    if (!restaurant) {
+      throw new NotFoundException('Restaurant not found');
+    }
+    this.assertCanUpdateRestaurant(restaurant, user);
+
+    const dir = getRestaurantsUploadAbsoluteDir();
+    await mkdir(dir, { recursive: true });
+
+    const id = randomUUID();
+    const base = `${id}.webp`;
+    const thumbBase = `${id}_thumb.webp`;
+    const dest = path.join(dir, base);
+    const destThumb = path.join(dir, thumbBase);
+
+    try {
+      await sharp(file.buffer)
+        .rotate()
+        .webp({ quality: 86 })
+        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+        .toFile(dest);
+
+      await sharp(file.buffer)
+        .rotate()
+        .resize(80, 80, { fit: 'cover' })
+        .webp({ quality: 82 })
+        .toFile(destThumb);
+    } catch {
+      throw new BadRequestException('Could not process image; use JPEG, PNG, GIF, or WebP');
+    }
+
+    const url = `${RESTAURANT_UPLOAD_PUBLIC_PREFIX}/${base}`;
+    restaurant.image = url;
+    await restaurant.save();
+    return { url };
   }
 }

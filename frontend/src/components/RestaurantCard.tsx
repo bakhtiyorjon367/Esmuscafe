@@ -3,6 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { IonCard, IonCardContent, IonIcon } from '@ionic/react';
 import { copyOutline } from 'ionicons/icons';
 import { copyToClipboard } from '@/lib/clipboard';
+import { restaurantThumbSrcForDisplay } from '@/lib/restaurant-images';
 import { setCategoryRestaurantId } from '@/lib/categoryRestaurant';
 import type { Restaurant, WorkingHours } from '@/types';
 
@@ -51,7 +52,7 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px' }}>
           <div style={{ position: 'relative', flexShrink: 0 }}>
             <img
-              src={restaurant.image}
+              src={restaurantThumbSrcForDisplay(restaurant.image)}
               alt={restaurant.name}
               style={{
                 width: 62,

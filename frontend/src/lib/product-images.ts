@@ -38,3 +38,16 @@ export function productThumbSrcForDisplay(fullPath: string): string {
 export function productImageSrcForDisplay(fullPath: string): string {
   return apiFileUrl(fullPath);
 }
+
+export const MAX_PRODUCT_IMAGES = 5;
+
+/** Stored image paths for a product (supports legacy single `image`). */
+export function productImagePaths(product: { image?: string; images?: string[] }): string[] {
+  if (product.images?.length) return product.images;
+  if (product.image) return [product.image];
+  return [];
+}
+
+export function productPrimaryImage(product: { image?: string; images?: string[] }): string {
+  return productImagePaths(product)[0] ?? '';
+}

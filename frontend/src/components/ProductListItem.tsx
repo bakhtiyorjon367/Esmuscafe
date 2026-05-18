@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useHistory } from 'react-router-dom';
 import { IonBadge, IonIcon } from '@ionic/react';
 import { heart, heartOutline, chatbubbleOutline, addCircle, checkmarkCircle, createOutline, trashOutline } from 'ionicons/icons';
-import { productThumbSrcForDisplay } from '@/lib/product-images';
+import { productPrimaryImage, productThumbSrcForDisplay } from '@/lib/product-images';
 import type { Product } from '@/types';
 import { useCart } from '../context/useCart';
 import { getProductId } from '@/lib/cartItem';
@@ -163,7 +163,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, restaurantId
     <>
       {flyStyle && (
         <div style={flyStyle}>
-          <img src={productThumbSrcForDisplay(product.image)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src={productThumbSrcForDisplay(productPrimaryImage(product))} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         </div>
       )}
 
@@ -211,7 +211,7 @@ const ProductListItem: React.FC<ProductListItemProps> = ({ product, restaurantId
         {/* Right: image */}
         <div ref={imgContainerRef} style={{ position: 'relative', width: 110, flexShrink: 0, alignSelf: 'stretch', minHeight: 110 }}>
           <img
-            src={productThumbSrcForDisplay(product.image)}
+            src={productThumbSrcForDisplay(productPrimaryImage(product))}
             alt={product.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover', filter: !isReady ? 'blur(3px) brightness(0.6)' : undefined }}
           />

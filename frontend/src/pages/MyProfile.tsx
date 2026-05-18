@@ -28,7 +28,7 @@ import {
   logOutOutline,
 } from 'ionicons/icons';
 import api from '@/lib/api';
-import { productThumbSrcForDisplay } from '@/lib/product-images';
+import { productImagePaths, productThumbSrcForDisplay } from '@/lib/product-images';
 import { isAxiosError } from 'axios';
 import { getProfile, removeToken } from '@/lib/auth';
 import type { User, UserAddress, WorkingHours } from '@/types';
@@ -754,7 +754,7 @@ const MyProfile: React.FC = () => {
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                         {product?.image && (
-                          <img src={productThumbSrcForDisplay(product.image)} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
+                          <img src={productThumbSrcForDisplay(productImagePaths(product)[0] ?? '')} alt="" style={{ width: 40, height: 40, borderRadius: 8, objectFit: 'cover', flexShrink: 0 }} />
                         )}
                         <div style={{ flex: 1 }}>
                           <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{product?.name ?? 'Product'}</p>

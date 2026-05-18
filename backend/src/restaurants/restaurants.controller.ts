@@ -1,4 +1,18 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { RestaurantsService } from './restaurants.service';
 import { CreateRestaurantWithOwnerDto } from './dto/create-restaurant-with-owner.dto';
 import { UpdateRestaurantDto } from './dto/update-restaurant.dto';
@@ -34,6 +48,34 @@ export class RestaurantsController {
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.restaurantsService.findOne(id);
+  }
+
+  @Post(':id/image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN, Role.RESTAURANT_OWNER)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 12 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+        if (!allowed.has(file.mimetype)) {
+          cb(new BadRequestException('Allowed types: JPEG, PNG, GIF, WebP') as unknown as Error, false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: any,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No image file');
+    }
+    return this.restaurantsService.uploadImage(id, file, user).then((result) => ({ data: result }));
   }
 
   @Patch(':id')

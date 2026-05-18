@@ -1,4 +1,4 @@
-import { productThumbSrcForDisplay } from '@/lib/product-images';
+import { productImagePaths, productThumbSrcForDisplay } from '@/lib/product-images';
 import type { CartItem } from '@/types';
 
 export function getProductId(item: CartItem): string {
@@ -15,7 +15,7 @@ export function getProductName(item: CartItem): string {
 
 export function getProductImage(item: CartItem): string {
   if (typeof item.productId === 'object' && item.productId !== null) {
-    return productThumbSrcForDisplay(item.productId.image);
+    return productThumbSrcForDisplay(productImagePaths(item.productId)[0] ?? '');
   }
   return '';
 }

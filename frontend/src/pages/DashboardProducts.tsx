@@ -20,12 +20,14 @@ import {
   IonSpinner,
 } from '@ionic/react';
 import { listenOwnerOpenAddProduct } from '@/lib/ownerDashboard';
+import FloatingBackButton from '@/components/FloatingBackButton';
 import ProductGrid from '@/components/ProductGrid';
-import ProductImagePicker from '@/components/ProductImagePicker';
+import ProductImagePicker, { type PendingImageItem } from '@/components/ProductImagePicker';
 import api from '@/lib/api';
 import { getProfile } from '@/lib/auth';
 import { IMAGE_COMPRESS_FAILED } from '@/lib/compress-image-for-upload';
-import { uploadProductImage } from '@/lib/upload-product-image';
+import { productImagePaths } from '@/lib/product-images';
+import { uploadProductImages } from '@/lib/upload-product-image';
 import type { Product, User } from '@/types';
 
 interface CategoryItem {
@@ -39,7 +41,7 @@ interface ProductFormData {
   ingredients: string;
   price: number;
   discount: number;
-  image: string;
+  images: string[];
   category: string;
   isAvailable: boolean;
   readyAt: number | '';
@@ -52,7 +54,7 @@ const EMPTY_FORM: ProductFormData = {
   ingredients: '',
   price: 0,
   discount: 0,
-  image: '',
+  images: [],
   category: '',
   isAvailable: true,
   readyAt: '',
@@ -69,14 +71,12 @@ const DashboardProducts: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(EMPTY_FORM);
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<PendingImageItem[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   const resetImageState = () => {
-    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-    setPendingImageFile(null);
-    setPendingPreviewUrl(null);
+    pendingImages.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    setPendingImages([]);
   };
 
   const openAddProductModal = () => {
@@ -127,15 +127,24 @@ const DashboardProducts: React.FC = () => {
     }
   };
 
-  const handlePickImage = (file: File) => {
-    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-    setPendingImageFile(file);
-    setPendingPreviewUrl(URL.createObjectURL(file));
+  const handlePickFiles = (files: File[]) => {
+    const newItems = files.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setPendingImages((prev) => [...prev, ...newItems]);
   };
 
-  const handleClearImage = () => {
-    resetImageState();
-    setFormData((prev) => ({ ...prev, image: '' }));
+  const handleRemoveStored = (path: string) => {
+    setFormData((prev) => ({ ...prev, images: prev.images.filter((p) => p !== path) }));
+  };
+
+  const handleRemovePending = (previewUrl: string) => {
+    setPendingImages((prev) => {
+      const item = prev.find((p) => p.previewUrl === previewUrl);
+      if (item) URL.revokeObjectURL(previewUrl);
+      return prev.filter((p) => p.previewUrl !== previewUrl);
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,8 +154,8 @@ const DashboardProducts: React.FC = () => {
     const discount = Number(formData.discount);
     if (isNaN(price) || price < 0) { alert('Please enter a valid price'); return; }
     if (isNaN(discount) || discount < 0) { alert('Please enter a valid discount'); return; }
-    if (!pendingImageFile && !formData.image) {
-      alert('Please choose a product photo');
+    if (formData.images.length + pendingImages.length === 0) {
+      alert('Please choose at least one product photo');
       return;
     }
     try {
@@ -163,21 +172,21 @@ const DashboardProducts: React.FC = () => {
       };
       let productId: string;
       if (editingProduct) {
-        const patchPayload = pendingImageFile
-          ? basePayload
-          : { ...basePayload, image: formData.image };
-        await api.patch(`/products/${editingProduct._id}`, patchPayload);
+        await api.patch(`/products/${editingProduct._id}`, {
+          ...basePayload,
+          images: formData.images,
+        });
         productId = editingProduct._id;
       } else {
         const res = await api.post('/products', {
           ...basePayload,
-          image: formData.image || '',
+          images: [],
           restaurantId: user.restaurantId,
         });
         productId = res.data._id;
       }
-      if (pendingImageFile) {
-        await uploadProductImage(productId, pendingImageFile);
+      if (pendingImages.length > 0) {
+        await uploadProductImages(productId, pendingImages.map((p) => p.file));
       }
       closeProductModal();
       fetchData();
@@ -199,7 +208,7 @@ const DashboardProducts: React.FC = () => {
       ingredients: product.ingredients ?? '',
       price: product.price,
       discount: product.discount,
-      image: product.image,
+      images: productImagePaths(product),
       category: product.category,
       isAvailable: product.isAvailable,
       readyAt: product.readyAt ?? '',
@@ -330,6 +339,9 @@ const DashboardProducts: React.FC = () => {
             </IonToolbar>
           </IonHeader>
           <IonContent className="ion-padding">
+            {showModal && (
+              <FloatingBackButton aboveTabBar={false} onBack={closeProductModal} />
+            )}
             <form onSubmit={handleSubmit}>
               <IonItem>
                 <IonLabel position="stacked">Name *</IonLabel>
@@ -377,10 +389,11 @@ const DashboardProducts: React.FC = () => {
                 />
               </IonItem>
               <ProductImagePicker
-                storedImagePath={formData.image}
-                previewUrl={pendingPreviewUrl}
-                onPick={handlePickImage}
-                onClear={handleClearImage}
+                storedPaths={formData.images}
+                pendingItems={pendingImages}
+                onPickFiles={handlePickFiles}
+                onRemoveStored={handleRemoveStored}
+                onRemovePending={handleRemovePending}
               />
               <IonItem>
                 <IonLabel position="stacked">Category *</IonLabel>

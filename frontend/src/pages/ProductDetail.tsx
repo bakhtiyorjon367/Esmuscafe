@@ -24,10 +24,10 @@ import {
 import { heart, heartOutline, sendOutline, trashOutline, createOutline } from 'ionicons/icons';
 import api from '@/lib/api';
 import { isAuthenticated } from '@/lib/auth';
-import ProductImagePicker from '@/components/ProductImagePicker';
+import ProductImagePicker, { type PendingImageItem } from '@/components/ProductImagePicker';
 import { IMAGE_COMPRESS_FAILED } from '@/lib/compress-image-for-upload';
-import { productImageSrcForDisplay } from '@/lib/product-images';
-import { uploadProductImage } from '@/lib/upload-product-image';
+import { productImagePaths, productImageSrcForDisplay } from '@/lib/product-images';
+import { uploadProductImages } from '@/lib/upload-product-image';
 import type { Product, Comment, User, Restaurant } from '@/types';
 import { useReadyCountdown, formatReadyAt } from '@/hooks/useReadyCountdown';
 import FloatingBackButton from '@/components/FloatingBackButton';
@@ -45,12 +45,12 @@ function timeAgo(dateStr: string): string {
 interface CategoryItem { _id: string; name: string; }
 interface ProductFormData {
   name: string; description: string; ingredients: string;
-  price: number; discount: number; image: string; category: string;
+  price: number; discount: number; images: string[]; category: string;
   isAvailable: boolean; readyAt: number | ''; tags: ('suggested' | 'new')[];
 }
 const EMPTY_FORM: ProductFormData = {
   name: '', description: '', ingredients: '', price: 0, discount: 0,
-  image: '', category: '', isAvailable: true, readyAt: '', tags: [],
+  images: [], category: '', isAvailable: true, readyAt: '', tags: [],
 };
 
 function restaurantIdString(rid: Product['restaurantId']): string {
@@ -74,8 +74,7 @@ const ProductDetail: React.FC = () => {
   // Owner edit modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>(EMPTY_FORM);
-  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
+  const [pendingImages, setPendingImages] = useState<PendingImageItem[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -159,20 +158,28 @@ const ProductDetail: React.FC = () => {
   };
 
   const resetImageState = () => {
-    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-    setPendingImageFile(null);
-    setPendingPreviewUrl(null);
+    pendingImages.forEach((item) => URL.revokeObjectURL(item.previewUrl));
+    setPendingImages([]);
   };
 
-  const handlePickImage = (file: File) => {
-    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
-    setPendingImageFile(file);
-    setPendingPreviewUrl(URL.createObjectURL(file));
+  const handlePickFiles = (files: File[]) => {
+    const newItems = files.map((file) => ({
+      file,
+      previewUrl: URL.createObjectURL(file),
+    }));
+    setPendingImages((prev) => [...prev, ...newItems]);
   };
 
-  const handleClearImage = () => {
-    resetImageState();
-    setFormData((prev) => ({ ...prev, image: '' }));
+  const handleRemoveStored = (path: string) => {
+    setFormData((prev) => ({ ...prev, images: prev.images.filter((p) => p !== path) }));
+  };
+
+  const handleRemovePending = (previewUrl: string) => {
+    setPendingImages((prev) => {
+      const item = prev.find((p) => p.previewUrl === previewUrl);
+      if (item) URL.revokeObjectURL(previewUrl);
+      return prev.filter((p) => p.previewUrl !== previewUrl);
+    });
   };
 
   const openEditModal = () => {
@@ -184,7 +191,7 @@ const ProductDetail: React.FC = () => {
       ingredients: product.ingredients ?? '',
       price: product.price,
       discount: product.discount,
-      image: product.image,
+      images: productImagePaths(product),
       category: product.category,
       isAvailable: product.isAvailable,
       readyAt: product.readyAt ?? '',
@@ -199,8 +206,8 @@ const ProductDetail: React.FC = () => {
     const price = Number(formData.price);
     const discount = Number(formData.discount);
     if (isNaN(price) || price < 0 || isNaN(discount) || discount < 0) return;
-    if (!pendingImageFile && !formData.image) {
-      alert('Please choose a product photo');
+    if (formData.images.length + pendingImages.length === 0) {
+      alert('Please choose at least one product photo');
       return;
     }
     setSaving(true);
@@ -216,14 +223,18 @@ const ProductDetail: React.FC = () => {
         readyAt: formData.readyAt === '' ? null : Number(formData.readyAt),
         tags: formData.tags,
       };
-      const patchPayload = pendingImageFile
-        ? basePayload
-        : { ...basePayload, image: formData.image };
-      const res = await api.patch(`/products/${product._id}`, patchPayload);
+      const res = await api.patch(`/products/${product._id}`, {
+        ...basePayload,
+        images: formData.images,
+      });
       let updated = res.data as Product;
-      if (pendingImageFile) {
-        const url = await uploadProductImage(product._id, pendingImageFile);
-        updated = { ...updated, image: url };
+      if (pendingImages.length > 0) {
+        const urls = await uploadProductImages(product._id, pendingImages.map((p) => p.file));
+        updated = {
+          ...updated,
+          images: [...(updated.images ?? productImagePaths(updated)), ...urls],
+          image: urls[0] ?? updated.image,
+        };
       }
       setProduct(updated);
       resetImageState();
@@ -309,7 +320,7 @@ const ProductDetail: React.FC = () => {
         {/* Product image */}
         <div style={{ position: 'relative', width: '100%', height: 240 }}>
           <img
-            src={productImageSrcForDisplay(product.image)}
+            src={productImageSrcForDisplay(productImagePaths(product)[0] ?? '')}
             alt={product.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover', filter: !isReady ? 'blur(4px) brightness(0.55)' : undefined }}
           />
@@ -435,6 +446,9 @@ const ProductDetail: React.FC = () => {
             </IonToolbar>
           </IonHeader>
           <IonContent className="ion-padding">
+            {showEditModal && (
+              <FloatingBackButton aboveTabBar={false} onBack={() => setShowEditModal(false)} />
+            )}
             <form onSubmit={handleSave}>
               <IonItem>
                 <IonLabel position="stacked">Name *</IonLabel>
@@ -459,10 +473,11 @@ const ProductDetail: React.FC = () => {
                   onIonInput={(e) => { const v = String((e.target as HTMLIonInputElement).value ?? ''); setFormData({ ...formData, discount: v === '' ? 0 : parseInt(v, 10) || 0 }); }} />
               </IonItem>
               <ProductImagePicker
-                storedImagePath={formData.image}
-                previewUrl={pendingPreviewUrl}
-                onPick={handlePickImage}
-                onClear={handleClearImage}
+                storedPaths={formData.images}
+                pendingItems={pendingImages}
+                onPickFiles={handlePickFiles}
+                onRemoveStored={handleRemoveStored}
+                onRemovePending={handleRemovePending}
               />
               <IonItem>
                 <IonLabel position="stacked">Category *</IonLabel>

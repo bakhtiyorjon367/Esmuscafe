@@ -1,6 +1,6 @@
 import {
   IsNotEmpty, IsString, IsNumber, IsMongoId, IsBoolean,
-  IsOptional, Min, IsArray, IsIn,
+  IsOptional, Min, IsArray, IsIn, ArrayMaxSize,
 } from 'class-validator';
 
 export class CreateProductDto {
@@ -33,6 +33,12 @@ export class CreateProductDto {
   @IsString()
   @IsOptional()
   image?: string;
+
+  @IsArray()
+  @IsString({ each: true })
+  @ArrayMaxSize(5)
+  @IsOptional()
+  images?: string[];
 
   @IsString()
   @IsNotEmpty()

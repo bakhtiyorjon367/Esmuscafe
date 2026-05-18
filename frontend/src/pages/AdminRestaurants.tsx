@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useHistory, useLocation } from 'react-router-dom';
 import {
   IonContent,
@@ -14,15 +14,20 @@ import {
   IonSpinner,
   IonCard,
   IonCardContent,
+  IonIcon,
 } from '@ionic/react';
+import { closeOutline, imageOutline } from 'ionicons/icons';
+import FloatingBackButton from '@/components/FloatingBackButton';
 import api from '@/lib/api';
 import { listenAdminOpenAddRestaurant } from '@/lib/adminDashboard';
+import { IMAGE_COMPRESS_FAILED } from '@/lib/compress-image-for-upload';
+import { restaurantImageSrcForDisplay, restaurantThumbSrcForDisplay } from '@/lib/restaurant-images';
+import { uploadRestaurantImage } from '@/lib/upload-restaurant-image';
 import type { Restaurant } from '@/types';
 
 const emptyForm = () => ({
   name: '',
   description: '',
-  image: '',
   address: '',
   ownerNickname: '',
   ownerLogin: '',
@@ -38,11 +43,21 @@ const AdminRestaurants: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [formData, setFormData] = useState(emptyForm());
+  const [storedImage, setStoredImage] = useState('');
+  const [pendingImage, setPendingImage] = useState<{ file: File; previewUrl: string } | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const resetImageState = () => {
+    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl);
+    setPendingImage(null);
+    setStoredImage('');
+  };
 
   const openAddRestaurantModal = () => {
     setEditingRestaurant(null);
     setFormData(emptyForm());
+    resetImageState();
     setShowModal(true);
   };
 
@@ -50,6 +65,7 @@ const AdminRestaurants: React.FC = () => {
     setShowModal(false);
     setEditingRestaurant(null);
     setFormData(emptyForm());
+    resetImageState();
     if (new URLSearchParams(location.search).get('add') === '1') {
       history.replace('/admin/restaurants');
     }
@@ -78,14 +94,36 @@ const AdminRestaurants: React.FC = () => {
     }
   };
 
+  const handlePickImage = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl);
+    setPendingImage({ file, previewUrl: URL.createObjectURL(file) });
+  };
+
+  const handleRemoveImage = () => {
+    if (pendingImage) URL.revokeObjectURL(pendingImage.previewUrl);
+    setPendingImage(null);
+    setStoredImage('');
+  };
+
+  const displayImageSrc = pendingImage?.previewUrl
+    ?? (storedImage ? restaurantImageSrcForDisplay(storedImage) : '');
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const hasImage = !!(storedImage || pendingImage);
+    if (!hasImage) {
+      alert('Please add a restaurant photo');
+      return;
+    }
     try {
+      let restaurantId: string;
       if (editingRestaurant) {
         const payload: Record<string, string> = {
           name: formData.name,
           description: formData.description,
-          image: formData.image,
           address: formData.address,
         };
         const n = formData.ownerNickname.trim();
@@ -95,26 +133,35 @@ const AdminRestaurants: React.FC = () => {
         if (l) payload.ownerLogin = l;
         if (p) payload.ownerNewPassword = p;
         await api.patch(`/restaurants/${editingRestaurant._id}`, payload);
+        restaurantId = editingRestaurant._id;
       } else {
-        await api.post('/restaurants', {
+        const res = await api.post('/restaurants', {
           name: formData.name,
           description: formData.description,
-          image: formData.image,
+          image: '',
           address: formData.address,
           ownerNickname: formData.ownerNickname.trim(),
           ownerLogin: formData.ownerLogin.trim(),
           ownerPassword: formData.ownerPassword,
         });
+        restaurantId = res.data._id;
+      }
+      if (pendingImage) {
+        await uploadRestaurantImage(restaurantId, pendingImage.file);
       }
       closeRestaurantModal();
       fetchRestaurants();
     } catch (error) {
       console.error('Failed to save restaurant:', error);
-      alert('Failed to save restaurant');
+      const msg = error instanceof Error && error.message === IMAGE_COMPRESS_FAILED
+        ? 'Could not prepare the photo for upload. Try another image.'
+        : error instanceof Error ? error.message : 'Failed to save restaurant';
+      alert(msg);
     }
   };
 
   const handleEdit = (restaurant: Restaurant) => {
+    resetImageState();
     setEditingRestaurant(restaurant);
     const raw = restaurant.ownerId;
     const ownerNickname =
@@ -128,13 +175,13 @@ const AdminRestaurants: React.FC = () => {
     setFormData({
       name: restaurant.name,
       description: restaurant.description,
-      image: restaurant.image,
       address: restaurant.address ?? '',
       ownerNickname,
       ownerLogin,
       ownerPassword: '',
       ownerNewPassword: '',
     });
+    setStoredImage(restaurant.image ?? '');
     setShowModal(true);
   };
 
@@ -176,15 +223,13 @@ const AdminRestaurants: React.FC = () => {
                   <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16 }}>
                     {restaurant.image ? (
                       <img
-                        src={restaurant.image}
+                        src={restaurantThumbSrcForDisplay(restaurant.image)}
                         alt={restaurant.name}
-                        onClick={() => handleEdit(restaurant)}
-                        style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: 10, cursor: 'pointer', flexShrink: 0 }}
+                        style={{ width: 62, height: 62, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }}
                       />
                     ) : (
                       <div
-                        onClick={() => handleEdit(restaurant)}
-                        style={{ width: 62, height: 62, borderRadius: 10, background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0, fontSize: 11, color: '#9ca3af' }}
+                        style={{ width: 62, height: 62, borderRadius: 10, background: '#e5e7eb', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 11, color: '#9ca3af' }}
                       >
                         No Image
                       </div>
@@ -204,31 +249,40 @@ const AdminRestaurants: React.FC = () => {
                       )}
                     </div>
 
-                    <select
-                      value={restaurant.status}
-                      disabled={togglingId === restaurant._id}
-                      onChange={(e) => handleStatusChange(restaurant, e.target.value as Restaurant['status'])}
-                      style={{
-                        flexShrink: 0,
-                        border: '1px solid #d1d5db',
-                        borderRadius: 8,
-                        padding: '5px 8px',
-                        fontSize: 13,
-                        fontWeight: 600,
-                        cursor: togglingId === restaurant._id ? 'not-allowed' : 'pointer',
-                        opacity: togglingId === restaurant._id ? 0.6 : 1,
-                        background: restaurant.status === 'active' ? '#dcfce7'
-                          : restaurant.status === 'inactive' ? '#fee2e2'
-                          : '#f3f4f6',
-                        color: restaurant.status === 'active' ? '#166534'
-                          : restaurant.status === 'inactive' ? '#991b1b'
-                          : '#374151',
-                      }}
-                    >
-                      <option value="active">Active</option>
-                      <option value="inactive">Inactive</option>
-                      <option value="deleted">Delete</option>
-                    </select>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'stretch', gap: 8, flexShrink: 0 }}>
+                      <select
+                        value={restaurant.status}
+                        disabled={togglingId === restaurant._id}
+                        onChange={(e) => handleStatusChange(restaurant, e.target.value as Restaurant['status'])}
+                        style={{
+                          border: '1px solid #d1d5db',
+                          borderRadius: 8,
+                          padding: '5px 8px',
+                          fontSize: 13,
+                          fontWeight: 600,
+                          cursor: togglingId === restaurant._id ? 'not-allowed' : 'pointer',
+                          opacity: togglingId === restaurant._id ? 0.6 : 1,
+                          background: restaurant.status === 'active' ? '#dcfce7'
+                            : restaurant.status === 'inactive' ? '#fee2e2'
+                            : '#f3f4f6',
+                          color: restaurant.status === 'active' ? '#166534'
+                            : restaurant.status === 'inactive' ? '#991b1b'
+                            : '#374151',
+                        }}
+                      >
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
+                        <option value="deleted">Delete</option>
+                      </select>
+                      <IonButton
+                        size="small"
+                        fill="outline"
+                        onClick={() => handleEdit(restaurant)}
+                        style={{ margin: 0, '--padding-start': '10px', '--padding-end': '10px' } as React.CSSProperties}
+                      >
+                        Edit
+                      </IonButton>
+                    </div>
                   </div>
                 </IonCardContent>
               </IonCard>
@@ -246,6 +300,9 @@ const AdminRestaurants: React.FC = () => {
             </IonToolbar>
           </IonHeader>
           <IonContent className="ion-padding">
+            {showModal && (
+              <FloatingBackButton aboveTabBar={false} onBack={closeRestaurantModal} />
+            )}
             <form onSubmit={handleSubmit} style={styles.form}>
               <div style={styles.fieldGroup}>
                 <label style={styles.fieldLabel}>Name</label>
@@ -265,13 +322,52 @@ const AdminRestaurants: React.FC = () => {
                 />
               </div>
               <div style={styles.fieldGroup}>
-                <label style={styles.fieldLabel}>Image URL</label>
-                <IonInput
-                  type="url"
-                  value={formData.image}
-                  onIonInput={(e) => setFormData({ ...formData, image: String((e.target as HTMLIonInputElement).value ?? '') })}
-                  required
+                <label style={styles.fieldLabel}>Restaurant photo</label>
+                <input
+                  ref={imageInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/gif,image/webp"
+                  style={{ display: 'none' }}
+                  onChange={handlePickImage}
                 />
+                {displayImageSrc && (
+                  <div style={{ position: 'relative', display: 'inline-block', marginBottom: 8 }}>
+                    <img
+                      src={displayImageSrc}
+                      alt=""
+                      style={{ width: 96, height: 96, borderRadius: 10, objectFit: 'cover' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveImage}
+                      aria-label="Remove image"
+                      style={{
+                        position: 'absolute',
+                        top: -6,
+                        right: -6,
+                        width: 24,
+                        height: 24,
+                        borderRadius: '50%',
+                        border: 'none',
+                        background: 'var(--ion-color-danger)',
+                        color: '#fff',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        padding: 0,
+                      }}
+                    >
+                      <IonIcon icon={closeOutline} style={{ fontSize: 14 }} />
+                    </button>
+                  </div>
+                )}
+                {!displayImageSrc && (
+                  <IonButton type="button" fill="outline" size="small" onClick={() => imageInputRef.current?.click()}>
+                    <IonIcon icon={imageOutline} slot="start" />
+                    Add image
+                  </IonButton>
+                )}
               </div>
               <div style={styles.fieldGroup}>
                 <label style={styles.fieldLabel}>Address</label>

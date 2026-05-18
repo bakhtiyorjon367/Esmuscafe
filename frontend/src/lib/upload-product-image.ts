@@ -1,10 +1,13 @@
 import { postFormData } from '@/lib/api';
 import { compressImageFileForUpload } from '@/lib/compress-image-for-upload';
 
-export async function uploadProductImage(productId: string, file: File): Promise<string> {
-  const compressed = await compressImageFileForUpload(file);
+export async function uploadProductImages(productId: string, files: File[]): Promise<string[]> {
+  if (!files.length) return [];
+  const compressed = await Promise.all(files.map((f) => compressImageFileForUpload(f)));
   const formData = new FormData();
-  formData.append('image', compressed);
-  const res = await postFormData<{ data: { url: string } }>(`/products/${productId}/image`, formData);
-  return res.data.url;
+  for (const f of compressed) {
+    formData.append('images', f);
+  }
+  const res = await postFormData<{ data: { urls: string[] } }>(`/products/${productId}/images`, formData);
+  return res.data.urls;
 }

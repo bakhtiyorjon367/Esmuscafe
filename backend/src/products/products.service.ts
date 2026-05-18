@@ -25,6 +25,7 @@ export class ProductsService {
     }
 
     const createdProduct = new this.productModel(createProductDto);
+    this.syncProductImageFields(createdProduct);
     return createdProduct.save();
   }
 
@@ -59,7 +60,11 @@ export class ProductsService {
       }
     }
 
+    if (updateProductDto.images && updateProductDto.images.length > 5) {
+      throw new BadRequestException('Maximum 5 images per product');
+    }
     Object.assign(product, updateProductDto);
+    this.syncProductImageFields(product);
     return product.save();
   }
 
@@ -119,16 +124,31 @@ export class ProductsService {
     }
   }
 
+  private syncProductImageFields(product: ProductDocument) {
+    const imgs = product.images?.filter(Boolean) ?? [];
+    if (imgs.length > 0) {
+      product.images = imgs.slice(0, 5);
+      product.image = product.images[0];
+      return;
+    }
+    if (product.image) {
+      product.images = [product.image];
+      return;
+    }
+    product.images = [];
+    product.image = '';
+  }
+
   /**
-   * Saves an uploaded image buffer to disk (WebP + 80×80 thumb) and sets product.image.
+   * Saves uploaded image buffers to disk (WebP + thumb) and appends URLs to product.images.
    */
-  async uploadProductImage(
+  async appendUploadedImages(
     productId: string,
-    file: Express.Multer.File,
+    files: Express.Multer.File[],
     user: { role: Role; restaurantId?: Types.ObjectId | string },
-  ): Promise<{ url: string }> {
-    if (!file) {
-      throw new BadRequestException('No image file');
+  ): Promise<{ urls: string[] }> {
+    if (!files?.length) {
+      throw new BadRequestException('No image files');
     }
 
     const product = await this.productModel.findById(productId);
@@ -137,34 +157,44 @@ export class ProductsService {
     }
     this.assertOwnerAccess(product, user);
 
+    const current = product.images?.length ?? (product.image ? 1 : 0);
+    if (current + files.length > 5) {
+      throw new BadRequestException('Maximum 5 images per product');
+    }
+
     const dir = getProductsUploadAbsoluteDir();
     await mkdir(dir, { recursive: true });
 
-    const id = randomUUID();
-    const base = `${id}.webp`;
-    const thumbBase = `${id}_thumb.webp`;
-    const dest = path.join(dir, base);
-    const destThumb = path.join(dir, thumbBase);
+    const newUrls: string[] = [];
+    for (const file of files) {
+      const id = randomUUID();
+      const base = `${id}.webp`;
+      const thumbBase = `${id}_thumb.webp`;
+      const dest = path.join(dir, base);
+      const destThumb = path.join(dir, thumbBase);
 
-    try {
-      await sharp(file.buffer)
-        .rotate()
-        .webp({ quality: 86 })
-        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
-        .toFile(dest);
+      try {
+        await sharp(file.buffer)
+          .rotate()
+          .webp({ quality: 86 })
+          .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+          .toFile(dest);
 
-      await sharp(file.buffer)
-        .rotate()
-        .resize(80, 80, { fit: 'cover' })
-        .webp({ quality: 82 })
-        .toFile(destThumb);
-    } catch {
-      throw new BadRequestException('Could not process image; use JPEG, PNG, GIF, or WebP');
+        await sharp(file.buffer)
+          .rotate()
+          .resize(80, 80, { fit: 'cover' })
+          .webp({ quality: 82 })
+          .toFile(destThumb);
+      } catch {
+        throw new BadRequestException('Could not process image; use JPEG, PNG, GIF, or WebP');
+      }
+
+      newUrls.push(`${PRODUCT_UPLOAD_PUBLIC_PREFIX}/${base}`);
     }
 
-    const url = `${PRODUCT_UPLOAD_PUBLIC_PREFIX}/${base}`;
-    product.image = url;
+    product.images = [...(product.images ?? []), ...newUrls];
+    this.syncProductImageFields(product);
     await product.save();
-    return { url };
+    return { urls: newUrls };
   }
 }

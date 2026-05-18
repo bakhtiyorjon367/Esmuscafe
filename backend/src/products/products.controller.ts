@@ -8,11 +8,11 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
+  UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -60,11 +60,11 @@ export class ProductsController {
     return this.productsService.toggleLike(id, user.userId);
   }
 
-  @Post(':id/image')
+  @Post(':id/images')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.RESTAURANT_OWNER)
   @UseInterceptors(
-    FileInterceptor('image', {
+    FilesInterceptor('images', 5, {
       storage: memoryStorage(),
       limits: { fileSize: 12 * 1024 * 1024 },
       fileFilter: (_req, file, cb) => {
@@ -77,12 +77,16 @@ export class ProductsController {
       },
     }),
   )
-  uploadImage(
+  uploadImages(
     @Param('id') id: string,
-    @UploadedFile() file: Express.Multer.File,
+    @UploadedFiles() files: Express.Multer.File[],
     @CurrentUser() user: any,
   ) {
-    return this.productsService.uploadProductImage(id, file, user).then((result) => ({ data: result }));
+    const list = files ?? [];
+    if (!list.length) {
+      throw new BadRequestException('No image files');
+    }
+    return this.productsService.appendUploadedImages(id, list, user).then((result) => ({ data: result }));
   }
 
   @Patch(':id')

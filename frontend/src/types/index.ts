@@ -27,6 +27,7 @@ export interface Product {
   price: number;
   discount: number;
   image: string;
+  images?: string[];
   category: string;
   isAvailable: boolean;
   /** Minutes until product is ready (null = ready now) */

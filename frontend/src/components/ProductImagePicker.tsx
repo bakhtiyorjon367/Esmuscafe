@@ -1,91 +1,108 @@
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import { IonButton, IonIcon, IonLabel } from '@ionic/react';
 import { closeOutline, imageOutline } from 'ionicons/icons';
-import { productThumbSrcForDisplay } from '@/lib/product-images';
+import { MAX_PRODUCT_IMAGES, productThumbSrcForDisplay } from '@/lib/product-images';
+
+export interface PendingImageItem {
+  file: File;
+  previewUrl: string;
+}
 
 interface ProductImagePickerProps {
-  storedImagePath: string;
-  previewUrl: string | null;
-  onPick: (file: File) => void;
-  onClear: () => void;
+  storedPaths: string[];
+  pendingItems: PendingImageItem[];
+  onPickFiles: (files: File[]) => void;
+  onRemoveStored: (path: string) => void;
+  onRemovePending: (previewUrl: string) => void;
 }
 
 const ProductImagePicker: React.FC<ProductImagePickerProps> = ({
-  storedImagePath,
-  previewUrl,
-  onPick,
-  onClear,
+  storedPaths,
+  pendingItems,
+  onPickFiles,
+  onRemoveStored,
+  onRemovePending,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
-  const displaySrc = previewUrl ?? (storedImagePath ? productThumbSrcForDisplay(storedImagePath) : '');
-
-  useEffect(() => {
-    return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
-    };
-  }, [previewUrl]);
+  const totalCount = storedPaths.length + pendingItems.length;
+  const canAddMore = totalCount < MAX_PRODUCT_IMAGES;
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) onPick(file);
+    const picked = Array.from(e.target.files ?? []);
+    if (!picked.length) return;
+    const slotsLeft = MAX_PRODUCT_IMAGES - totalCount;
+    onPickFiles(picked.slice(0, slotsLeft));
     e.target.value = '';
   };
 
   return (
     <div style={{ padding: '8px 16px' }}>
-      <IonLabel style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem' }}>Product photo *</IonLabel>
+      <IonLabel style={{ display: 'block', marginBottom: 8, fontSize: '0.85rem' }}>
+        Product photos * ({totalCount}/{MAX_PRODUCT_IMAGES})
+      </IonLabel>
       <input
         ref={inputRef}
         type="file"
         accept="image/jpeg,image/png,image/gif,image/webp"
+        multiple
         style={{ display: 'none' }}
         onChange={handleFileChange}
       />
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {displaySrc ? (
-          <div style={{ position: 'relative', flexShrink: 0 }}>
-            <img
-              src={displaySrc}
-              alt=""
-              style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover' }}
-            />
-            <button
-              type="button"
-              onClick={onClear}
-              aria-label="Remove image"
-              style={{
-                position: 'absolute',
-                top: -6,
-                right: -6,
-                width: 22,
-                height: 22,
-                borderRadius: '50%',
-                border: 'none',
-                background: 'var(--ion-color-danger)',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                padding: 0,
-              }}
-            >
-              <IonIcon icon={closeOutline} style={{ fontSize: 14 }} />
-            </button>
-          </div>
-        ) : null}
-        <IonButton
-          type="button"
-          fill="outline"
-          size="small"
-          onClick={() => inputRef.current?.click()}
-        >
-          <IonIcon icon={imageOutline} slot="start" />
-          {displaySrc ? 'Change photo' : 'Choose photo'}
-        </IonButton>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 8 }}>
+        {storedPaths.map((path) => (
+          <ThumbChip
+            key={path}
+            src={productThumbSrcForDisplay(path)}
+            onRemove={() => onRemoveStored(path)}
+          />
+        ))}
+        {pendingItems.map((item) => (
+          <ThumbChip
+            key={item.previewUrl}
+            src={item.previewUrl}
+            onRemove={() => onRemovePending(item.previewUrl)}
+          />
+        ))}
       </div>
+      {canAddMore && (
+        <IonButton type="button" fill="outline" size="small" onClick={() => inputRef.current?.click()}>
+          <IonIcon icon={imageOutline} slot="start" />
+          {totalCount === 0 ? 'Choose photos' : 'Add photos'}
+        </IonButton>
+      )}
     </div>
   );
 };
+
+function ThumbChip({ src, onRemove }: { src: string; onRemove: () => void }) {
+  return (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+      <img src={src} alt="" style={{ width: 80, height: 80, borderRadius: 8, objectFit: 'cover' }} />
+      <button
+        type="button"
+        onClick={onRemove}
+        aria-label="Remove image"
+        style={{
+          position: 'absolute',
+          top: -6,
+          right: -6,
+          width: 22,
+          height: 22,
+          borderRadius: '50%',
+          border: 'none',
+          background: 'var(--ion-color-danger)',
+          color: '#fff',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          padding: 0,
+        }}
+      >
+        <IonIcon icon={closeOutline} style={{ fontSize: 14 }} />
+      </button>
+    </div>
+  );
+}
 
 export default ProductImagePicker;

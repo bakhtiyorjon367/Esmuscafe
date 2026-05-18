@@ -12,8 +12,8 @@ export class CreateRestaurantWithOwnerDto {
   description?: string;
 
   @IsString()
-  @IsNotEmpty()
-  image: string;
+  @IsOptional()
+  image?: string;
 
   @IsString()
   @IsOptional()

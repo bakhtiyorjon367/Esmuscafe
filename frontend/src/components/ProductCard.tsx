@@ -1,6 +1,6 @@
 import React from 'react';
 import { IonCard, IonCardContent } from '@ionic/react';
-import { productThumbSrcForDisplay } from '@/lib/product-images';
+import { productPrimaryImage, productThumbSrcForDisplay } from '@/lib/product-images';
 import type { Product } from '@/types';
 
 interface ProductCardProps {
@@ -13,7 +13,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product }) => {
   return (
     <IonCard>
       <div style={{ position: 'relative', height: 160, width: '100%' }}>
-        <img src={productThumbSrcForDisplay(product.image)} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        <img src={productThumbSrcForDisplay(productPrimaryImage(product))} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         {!product.isAvailable && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <span style={{ color: 'white', fontWeight: 600 }}>Unavailable</span>
