@@ -3,6 +3,7 @@ import { useHistory } from 'react-router-dom';
 import { IonCard, IonCardContent, IonIcon } from '@ionic/react';
 import { copyOutline } from 'ionicons/icons';
 import { copyToClipboard } from '@/lib/clipboard';
+import { setCategoryRestaurantId } from '@/lib/categoryRestaurant';
 import type { Restaurant, WorkingHours } from '@/types';
 
 function isWithinWorkingHours(workingHours: WorkingHours | undefined): boolean {
@@ -39,7 +40,13 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) => {
   };
 
   return (
-    <IonCard button onClick={() => history.push(`/restaurant/${restaurant._id}`)}>
+    <IonCard
+      button
+      onClick={() => {
+        setCategoryRestaurantId(restaurant._id);
+        history.push(`/restaurant/${restaurant._id}`);
+      }}
+    >
       <IonCardContent className="ion-no-padding">
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px', padding: '16px' }}>
           <div style={{ position: 'relative', flexShrink: 0 }}>

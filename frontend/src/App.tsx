@@ -1,5 +1,5 @@
 import { Redirect, Route } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { IonApp, IonRouterOutlet, IonTabs, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -12,7 +12,9 @@ import DashboardCategories from './pages/DashboardCategories';
 import Cart from './pages/Cart';
 import MyProfile from './pages/MyProfile';
 import Collection from './pages/Collection';
+import Category from './pages/Category';
 import AuthGuard from './components/AuthGuard';
+import BottomNav from './components/BottomNav';
 import { CartProvider } from './context/CartContext';
 
 /* Core CSS required for Ionic components to work properly */
@@ -36,83 +38,92 @@ import '@ionic/react/css/palettes/dark.system.css';
 /* Theme variables */
 import './theme/variables.css';
 import './theme/global.css';
+import './theme/koruz-ui.css';
 
 setupIonicReact();
+
+const AppTabs: React.FC = () => (
+  <IonTabs>
+    <IonRouterOutlet>
+      <Route exact path="/" component={Home} />
+      <Route exact path="/category" component={Category} />
+      <Route exact path="/restaurant/:id" component={RestaurantDetail} />
+      <Route exact path="/restaurant/:restaurantId/product/:productId" component={ProductDetail} />
+      <Route exact path="/login" component={Login} />
+      <Route
+        exact
+        path="/cart"
+        render={() => (
+          <AuthGuard requireAuth>
+            <Cart />
+          </AuthGuard>
+        )}
+      />
+      <Route
+        exact
+        path="/my"
+        render={() => (
+          <AuthGuard requireAuth>
+            <MyProfile />
+          </AuthGuard>
+        )}
+      />
+      <Route
+        exact
+        path="/collection"
+        render={() => (
+          <AuthGuard requireAuth>
+            <Collection />
+          </AuthGuard>
+        )}
+      />
+      <Route
+        exact
+        path="/admin/restaurants"
+        render={() => (
+          <AuthGuard requireAuth>
+            <AdminRestaurants />
+          </AuthGuard>
+        )}
+      />
+      <Route
+        exact
+        path="/admin/profile"
+        render={() => (
+          <AuthGuard requireAuth>
+            <AdminProfile />
+          </AuthGuard>
+        )}
+      />
+      <Route
+        exact
+        path="/dashboard/products"
+        render={() => (
+          <AuthGuard requireAuth>
+            <DashboardProducts />
+          </AuthGuard>
+        )}
+      />
+      <Route
+        exact
+        path="/dashboard/categories"
+        render={() => (
+          <AuthGuard requireAuth>
+            <DashboardCategories />
+          </AuthGuard>
+        )}
+      />
+      <Redirect exact from="/dashboard" to="/dashboard/products" />
+    </IonRouterOutlet>
+    <BottomNav />
+  </IonTabs>
+);
 
 const App: React.FC = () => (
   <IonApp>
     <IonReactRouter>
       <CartProvider>
-        <IonRouterOutlet>
-          <Route exact path="/" component={Home} />
-          <Route exact path="/restaurant/:id" component={RestaurantDetail} />
-          <Route exact path="/restaurant/:restaurantId/product/:productId" component={ProductDetail} />
-          <Route exact path="/login" component={Login} />
-          <Route
-            exact
-            path="/cart"
-            render={() => (
-              <AuthGuard requireAuth>
-                <Cart />
-              </AuthGuard>
-            )}
-          />
-          <Route
-            exact
-            path="/my"
-            render={() => (
-              <AuthGuard requireAuth>
-                <MyProfile />
-              </AuthGuard>
-            )}
-          />
-          <Route
-            exact
-            path="/collection"
-            render={() => (
-              <AuthGuard requireAuth>
-                <Collection />
-              </AuthGuard>
-            )}
-          />
-          <Route
-            exact
-            path="/admin/restaurants"
-            render={() => (
-              <AuthGuard requireAuth>
-                <AdminRestaurants />
-              </AuthGuard>
-            )}
-          />
-          <Route
-            exact
-            path="/admin/profile"
-            render={() => (
-              <AuthGuard requireAuth>
-                <AdminProfile />
-              </AuthGuard>
-            )}
-          />
-          <Route
-            exact
-            path="/dashboard/products"
-            render={() => (
-              <AuthGuard requireAuth>
-                <DashboardProducts />
-              </AuthGuard>
-            )}
-          />
-          <Route
-            exact
-            path="/dashboard/categories"
-            render={() => (
-              <AuthGuard requireAuth>
-                <DashboardCategories />
-              </AuthGuard>
-            )}
-          />
-          <Redirect exact from="/dashboard" to="/dashboard/products" />
-        </IonRouterOutlet>
+        <AppTabs />
       </CartProvider>
     </IonReactRouter>
   </IonApp>

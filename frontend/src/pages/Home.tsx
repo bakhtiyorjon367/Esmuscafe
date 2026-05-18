@@ -1,30 +1,20 @@
 import { useEffect, useState } from 'react';
 import {
   IonContent,
-  IonHeader,
   IonPage,
-  IonTitle,
-  IonToolbar,
-  IonButton,
-  IonButtons,
-  IonIcon,
-  IonBadge,
   IonSpinner,
   useIonViewWillEnter,
 } from '@ionic/react';
-import { cartOutline, personOutline, heartOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
+import TabPageHeader from '@/components/TabPageHeader';
 import RestaurantCard from '@/components/RestaurantCard';
 import api from '@/lib/api';
-import { isAuthenticated, getProfile, getTokenRole } from '@/lib/auth';
-import { useCart } from '../context/useCart';
+import { isAuthenticated, getProfile } from '@/lib/auth';
 import type { Restaurant } from '@/types';
 
 const Home: React.FC = () => {
   const history = useHistory();
   const loggedIn = isAuthenticated();
-  const isUser = getTokenRole() === 'user';
-  const { totalItems } = useCart();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -57,37 +47,10 @@ const Home: React.FC = () => {
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Chuncheon</IonTitle>
-          <IonButtons slot="end">
-            {isUser && (
-              <IonButton onClick={() => history.push('/collection')}>
-                <IonIcon icon={heartOutline} />
-              </IonButton>
-            )}
-            {isUser && (
-              <IonButton onClick={() => history.push('/cart')} style={{ position: 'relative' }}>
-                <IonIcon icon={cartOutline} />
-                {totalItems > 0 && (
-                  <IonBadge
-                    color="danger"
-                    style={{ position: 'absolute', top: 2, right: 2, fontSize: '0.6rem', minWidth: 16, height: 16, borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px' }}
-                  >
-                    {totalItems}
-                  </IonBadge>
-                )}
-              </IonButton>
-            )}
-            <IonButton onClick={() => history.push(loggedIn ? '/my' : '/login')}>
-              <IonIcon icon={personOutline} />
-            </IonButton>
-          </IonButtons>
-        </IonToolbar>
-      </IonHeader>
+      <TabPageHeader title="Chuncheon" />
       <IonContent fullscreen className="ion-padding">
         <div className="ion-text-center ion-padding">
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Welcome to Esmuscafe</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Welcome to Esmuscafe</h1>
         </div>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 24 }}>

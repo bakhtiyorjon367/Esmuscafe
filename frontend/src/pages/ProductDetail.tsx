@@ -21,11 +21,12 @@ import {
   IonSelectOption,
   IonChip,
 } from '@ionic/react';
-import { heart, heartOutline, sendOutline, trashOutline, createOutline, arrowBackOutline } from 'ionicons/icons';
+import { heart, heartOutline, sendOutline, trashOutline, createOutline } from 'ionicons/icons';
 import api from '@/lib/api';
 import { isAuthenticated } from '@/lib/auth';
 import type { Product, Comment, User, Restaurant } from '@/types';
 import { useReadyCountdown, formatReadyAt } from '@/hooks/useReadyCountdown';
+import FloatingBackButton from '@/components/FloatingBackButton';
 
 function timeAgo(dateStr: string): string {
   const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
@@ -217,17 +218,13 @@ const ProductDetail: React.FC = () => {
       <IonPage>
         <IonHeader>
           <IonToolbar>
-            <IonButtons slot="start">
-              <IonButton fill="clear" onClick={() => history.goBack()}>
-                <IonIcon icon={arrowBackOutline} />
-              </IonButton>
-            </IonButtons>
             <IonTitle>Product</IonTitle>
           </IonToolbar>
         </IonHeader>
         <IonContent>
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}><IonSpinner /></div>
         </IonContent>
+        <FloatingBackButton defaultHref={`/restaurant/${restaurantId}`} />
       </IonPage>
     );
   }
@@ -237,15 +234,11 @@ const ProductDetail: React.FC = () => {
       <IonPage>
         <IonHeader>
           <IonToolbar>
-            <IonButtons slot="start">
-              <IonButton fill="clear" onClick={() => history.goBack()}>
-                <IonIcon icon={arrowBackOutline} />
-              </IonButton>
-            </IonButtons>
             <IonTitle>Not Found</IonTitle>
           </IonToolbar>
         </IonHeader>
         <IonContent className="ion-padding"><p>Product not found.</p></IonContent>
+        <FloatingBackButton defaultHref={`/restaurant/${restaurantId}`} />
       </IonPage>
     );
   }
@@ -257,11 +250,6 @@ const ProductDetail: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton fill="clear" onClick={() => history.goBack()}>
-              <IonIcon icon={arrowBackOutline} />
-            </IonButton>
-          </IonButtons>
           <IonTitle>{product.name}</IonTitle>
           {isOwner && (
             <IonButtons slot="end">
@@ -470,6 +458,7 @@ const ProductDetail: React.FC = () => {
           </IonContent>
         </IonModal>
       </IonContent>
+      <FloatingBackButton defaultHref={`/restaurant/${restaurantId}`} />
     </IonPage>
   );
 };

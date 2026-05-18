@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
   IonContent,
   IonPage,
@@ -121,6 +121,8 @@ const AccordionSection: React.FC<{
 
 const MyProfile: React.FC = () => {
   const history = useHistory();
+  const { pathname } = useLocation();
+  const isProfileTab = pathname === '/my';
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [restaurantId, setRestaurantId] = useState<string | null>(null);
@@ -351,11 +353,13 @@ const MyProfile: React.FC = () => {
       <IonPage>
         <IonHeader>
           <IonToolbar>
-            <IonButtons slot="start">
-              <IonButton fill="clear" onClick={() => history.goBack()}>
-                <IonIcon icon={arrowBackOutline} />
-              </IonButton>
-            </IonButtons>
+            {!isProfileTab && (
+              <IonButtons slot="start">
+                <IonButton fill="clear" onClick={() => history.goBack()}>
+                  <IonIcon icon={arrowBackOutline} />
+                </IonButton>
+              </IonButtons>
+            )}
             <IonTitle>My Profile</IonTitle>
           </IonToolbar>
         </IonHeader>
@@ -374,11 +378,13 @@ const MyProfile: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton fill="clear" onClick={() => history.goBack()}>
-              <IonIcon icon={arrowBackOutline} />
-            </IonButton>
-          </IonButtons>
+          {!isProfileTab && (
+            <IonButtons slot="start">
+              <IonButton fill="clear" onClick={() => history.goBack()}>
+                <IonIcon icon={arrowBackOutline} />
+              </IonButton>
+            </IonButtons>
+          )}
           <IonTitle>My Profile</IonTitle>
         </IonToolbar>
       </IonHeader>

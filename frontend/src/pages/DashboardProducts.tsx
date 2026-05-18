@@ -22,7 +22,7 @@ import {
   IonSpinner,
 } from '@ionic/react';
 import { arrowBackOutline, trashOutline, addOutline, closeOutline, personOutline } from 'ionicons/icons';
-import ProductListItem from '@/components/ProductListItem';
+import ProductGrid from '@/components/ProductGrid';
 import api from '@/lib/api';
 import { isAxiosError } from 'axios';
 import { getProfile, removeToken } from '@/lib/auth';
@@ -323,16 +323,11 @@ const DashboardProducts: React.FC = () => {
                 return filtered.length === 0 ? (
                   <p className="ion-text-center" style={{ color: 'var(--ion-color-medium)' }}>No products yet</p>
                 ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column' }}>
-                    {filtered.map((product) => (
-                      <ProductListItem
-                        key={product._id}
-                        product={product}
-                        restaurantId={user.restaurantId!}
-                        ownerActions={{ onEdit: handleEdit, onDelete: handleDelete }}
-                      />
-                    ))}
-                  </div>
+                  <ProductGrid
+                    products={filtered}
+                    restaurantId={user.restaurantId!}
+                    ownerActions={{ onEdit: handleEdit, onDelete: handleDelete }}
+                  />
                 );
               })()}
             </div>
