@@ -85,6 +85,10 @@ export function initTelegramWebApp(): void {
 
   WebApp.ready();
   WebApp.expand();
+  WebApp.disableVerticalSwipes();
+  WebApp.isClosingConfirmationEnabled = true;
+
+  document.documentElement.classList.add('telegram-mini-app');
   applyTelegramTheme();
 
   WebApp.onEvent('themeChanged', applyTelegramTheme);

@@ -1,0 +1,13 @@
+/* Prevent Telegram from intercepting body scroll; scroll inside #root instead */
+html.telegram-mini-app,
+html.telegram-mini-app body {
+  overflow: hidden;
+  height: 100%;
+}
+
+html.telegram-mini-app #root {
+  height: 100vh;
+  height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}

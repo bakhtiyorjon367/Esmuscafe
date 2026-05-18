@@ -59,7 +59,7 @@ const Home: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonTitle>Esmuscafe</IonTitle>
+          <IonTitle>Chuncheon</IonTitle>
           <IonButtons slot="end">
             {isUser && (
               <IonButton onClick={() => history.push('/collection')}>
