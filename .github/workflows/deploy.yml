@@ -12,6 +12,9 @@ jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
 
+    env:
+      DOMAIN: chuncheon.uz
+
     steps:
       # ── 1. Checkout ──────────────────────────────────────
       - name: Checkout code
@@ -30,12 +33,11 @@ jobs:
           npm run build
 
       # ── 3. Write frontend .env then build ────────────────
-      #    VITE_API_URL is baked into the JS bundle at build time,
-      #    so it must exist before `npm run build`
+      #    Relative /api keeps same-origin with nginx (no CORS issues).
       - name: Write frontend .env
         run: |
           cat > frontend/.env << 'ENVEOF'
-          VITE_API_URL=http://${{ secrets.EC2_HOST }}/api
+          VITE_API_URL=/api
           ENVEOF
 
       - name: Install & build frontend
@@ -47,11 +49,12 @@ jobs:
       # ── 4. Write backend .env (before upload) ────────────
       - name: Write backend .env
         run: |
-          cat > backend/.env << 'ENVEOF'
+          cat > backend/.env << ENVEOF
           PORT=${{ secrets.PORT }}
           JWT_SECRET=${{ secrets.JWT_SECRET }}
           MONGODB_URI=${{ secrets.MONGODB_URI }}
-          CLIENT_URL=${{ secrets.CLIENT_URL }}
+          CLIENT_URL=https://${{ env.DOMAIN }}
+          CORS_ORIGINS=https://${{ env.DOMAIN }},https://www.${{ env.DOMAIN }},http://${{ env.DOMAIN }},http://www.${{ env.DOMAIN }},http://${{ secrets.EC2_HOST }}
           ENVEOF
 
       # ── 5. Set up SSH ─────────────────────────────────────
@@ -63,13 +66,11 @@ jobs:
           ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
       # ── 6. Upload build artifacts to EC2 ─────────────────
-      #    Source files stay in GitHub — EC2 only gets compiled output
       - name: Upload build to EC2
         run: |
           ssh -i ~/.ssh/id_rsa ubuntu@${{ secrets.EC2_HOST }} \
             "mkdir -p /home/ubuntu/Esmuscafe/backend /home/ubuntu/Esmuscafe/frontend/dist"
 
-          # Backend: compiled JS + package files + .env
           rsync -az --delete \
             backend/dist/ \
             ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/Esmuscafe/backend/dist/
@@ -80,7 +81,6 @@ jobs:
             backend/.env \
             ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/Esmuscafe/backend/
 
-          # Frontend: static files → Nginx serves from here
           rsync -az --delete \
             frontend/dist/ \
             ubuntu@${{ secrets.EC2_HOST }}:/home/ubuntu/Esmuscafe/frontend/dist/
@@ -103,5 +103,5 @@ jobs:
           fi
 
           pm2 save
-          echo "✅ esmuscafe deployed successfully"
+          echo "✅ esmuscafe deployed to https://chuncheon.uz"
           ENDSSH
