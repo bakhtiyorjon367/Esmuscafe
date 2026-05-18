@@ -1,2 +1,12 @@
 /* For information on how to create your own theme, please refer to:
 http://ionicframework.com/docs/theming/ */
+
+:root {
+  --tg-theme-bg-color: var(--ion-background-color, #ffffff);
+  --tg-theme-text-color: var(--ion-text-color, #000000);
+  --tg-theme-hint-color: var(--ion-color-medium, #999999);
+  --tg-theme-link-color: var(--ion-color-primary, #3880ff);
+  --tg-theme-button-color: var(--ion-color-primary, #3880ff);
+  --tg-theme-button-text-color: #ffffff;
+  --tg-theme-secondary-bg-color: var(--ion-card-background, #f4f5f8);
+}
