@@ -224,7 +224,7 @@ const ProductDetail: React.FC = () => {
         <IonContent>
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}><IonSpinner /></div>
         </IonContent>
-        <FloatingBackButton defaultHref={`/restaurant/${restaurantId}`} />
+        <FloatingBackButton defaultHref="/main" />
       </IonPage>
     );
   }
@@ -238,7 +238,7 @@ const ProductDetail: React.FC = () => {
           </IonToolbar>
         </IonHeader>
         <IonContent className="ion-padding"><p>Product not found.</p></IonContent>
-        <FloatingBackButton defaultHref={`/restaurant/${restaurantId}`} />
+        <FloatingBackButton defaultHref="/main" />
       </IonPage>
     );
   }
@@ -458,7 +458,7 @@ const ProductDetail: React.FC = () => {
           </IonContent>
         </IonModal>
       </IonContent>
-      <FloatingBackButton defaultHref={`/restaurant/${restaurantId}`} />
+      <FloatingBackButton defaultHref="/main" />
     </IonPage>
   );
 };

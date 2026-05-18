@@ -3,7 +3,6 @@ import { IonApp, IonRouterOutlet, IonTabs, setupIonicReact } from '@ionic/react'
 import { IonReactRouter } from '@ionic/react-router';
 import Home from './pages/Home';
 import Login from './pages/Login';
-import RestaurantDetail from './pages/RestaurantDetail';
 import ProductDetail from './pages/ProductDetail';
 import AdminRestaurants from './pages/AdminRestaurants';
 import AdminProfile from './pages/AdminProfile';
@@ -13,9 +12,11 @@ import Cart from './pages/Cart';
 import MyProfile from './pages/MyProfile';
 import Collection from './pages/Collection';
 import Category from './pages/Category';
+import RestaurantMain from './pages/RestaurantMain';
 import AuthGuard from './components/AuthGuard';
 import BottomNav from './components/BottomNav';
 import { CartProvider } from './context/CartContext';
+import { setCategoryRestaurantId } from './lib/categoryRestaurant';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -46,8 +47,16 @@ const AppTabs: React.FC = () => (
   <IonTabs>
     <IonRouterOutlet>
       <Route exact path="/" component={Home} />
+      <Route exact path="/main" component={RestaurantMain} />
       <Route exact path="/category" component={Category} />
-      <Route exact path="/restaurant/:id" component={RestaurantDetail} />
+      <Route
+        exact
+        path="/restaurant/:id"
+        render={({ match }) => {
+          setCategoryRestaurantId(match.params.id);
+          return <Redirect to="/main" />;
+        }}
+      />
       <Route exact path="/restaurant/:restaurantId/product/:productId" component={ProductDetail} />
       <Route exact path="/login" component={Login} />
       <Route

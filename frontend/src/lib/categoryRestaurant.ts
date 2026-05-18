@@ -10,3 +10,13 @@ export function getCategoryRestaurantId(): string | null {
   if (typeof sessionStorage === 'undefined') return null;
   return sessionStorage.getItem(STORAGE_KEY);
 }
+
+export function clearCategoryRestaurantId(): void {
+  if (typeof sessionStorage !== 'undefined') {
+    sessionStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+export function hasSelectedRestaurant(): boolean {
+  return !!getCategoryRestaurantId();
+}

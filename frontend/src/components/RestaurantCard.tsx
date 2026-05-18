@@ -44,7 +44,7 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) => {
       button
       onClick={() => {
         setCategoryRestaurantId(restaurant._id);
-        history.push(`/restaurant/${restaurant._id}`);
+        history.push('/main');
       }}
     >
       <IonCardContent className="ion-no-padding">

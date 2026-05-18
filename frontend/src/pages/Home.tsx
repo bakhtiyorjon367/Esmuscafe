@@ -1,15 +1,18 @@
 import { useEffect, useState } from 'react';
 import {
   IonContent,
+  IonHeader,
   IonPage,
   IonSpinner,
+  IonTitle,
+  IonToolbar,
   useIonViewWillEnter,
 } from '@ionic/react';
 import { useHistory } from 'react-router-dom';
-import TabPageHeader from '@/components/TabPageHeader';
 import RestaurantCard from '@/components/RestaurantCard';
 import api from '@/lib/api';
 import { isAuthenticated, getProfile } from '@/lib/auth';
+import { clearCategoryRestaurantId } from '@/lib/categoryRestaurant';
 import type { Restaurant } from '@/types';
 
 const Home: React.FC = () => {
@@ -42,15 +45,23 @@ const Home: React.FC = () => {
   }, []);
 
   useIonViewWillEnter(() => {
+    clearCategoryRestaurantId();
     fetchRestaurants();
   });
 
   return (
     <IonPage>
-      <TabPageHeader title="Chuncheon" />
+      <IonHeader>
+        <IonToolbar>
+          <IonTitle>Chuncheon</IonTitle>
+        </IonToolbar>
+      </IonHeader>
       <IonContent fullscreen className="ion-padding">
         <div className="ion-text-center ion-padding">
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Welcome to Esmuscafe</h1>
+          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Choose a restaurant</h1>
+          <p style={{ margin: '8px 0 0', color: 'var(--ion-color-medium)', fontSize: '0.9rem' }}>
+            Select a restaurant to browse the menu
+          </p>
         </div>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 24 }}>
