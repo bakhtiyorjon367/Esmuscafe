@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Redirect } from 'react-router-dom';
 import { IonContent, IonPage, IonSpinner, IonText } from '@ionic/react';
 import TabPageHeader from '@/components/TabPageHeader';
+import FloatingBackButton from '@/components/FloatingBackButton';
 import ProductGrid from '@/components/ProductGrid';
 import api from '@/lib/api';
 import { getCategoryRestaurantId } from '@/lib/categoryRestaurant';
@@ -49,7 +50,7 @@ const Category: React.FC = () => {
 
   return (
     <IonPage>
-      <TabPageHeader title={restaurant?.name ?? 'Category'} showRestaurantPickerBack />
+      <TabPageHeader title={restaurant?.name ?? 'Category'} />
       <IonContent scrollY={false} className="category-ion-content">
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
@@ -82,6 +83,7 @@ const Category: React.FC = () => {
             </div>
           </div>
         )}
+        <FloatingBackButton restaurantPicker />
       </IonContent>
     </IonPage>
   );

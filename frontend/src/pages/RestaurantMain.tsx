@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Redirect } from 'react-router-dom';
 import { IonContent, IonPage, IonSpinner, IonText } from '@ionic/react';
 import TabPageHeader from '@/components/TabPageHeader';
+import FloatingBackButton from '@/components/FloatingBackButton';
 import ProductGrid from '@/components/ProductGrid';
 import api from '@/lib/api';
 import { getCategoryRestaurantId } from '@/lib/categoryRestaurant';
@@ -35,7 +36,7 @@ const RestaurantMain: React.FC = () => {
 
   return (
     <IonPage>
-      <TabPageHeader title={restaurant?.name ?? 'Menu'} showRestaurantPickerBack />
+      <TabPageHeader title={restaurant?.name ?? 'Menu'} />
       <IonContent className="ion-padding-top">
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}>
@@ -50,6 +51,7 @@ const RestaurantMain: React.FC = () => {
         {!loading && !error && (
           <ProductGrid products={products} restaurantId={restaurantId} />
         )}
+        <FloatingBackButton restaurantPicker />
       </IonContent>
     </IonPage>
   );

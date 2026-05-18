@@ -7,38 +7,23 @@ import {
   IonIcon,
   IonBadge,
 } from '@ionic/react';
-import { cartOutline, heartOutline, chevronBack } from 'ionicons/icons';
+import { cartOutline, heartOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
 import { getTokenRole } from '@/lib/auth';
-import { clearCategoryRestaurantId } from '@/lib/categoryRestaurant';
 import { useCart } from '@/context/useCart';
 
 type TabPageHeaderProps = {
   title: string;
-  /** Show back control to return to the restaurant picker (clears selection). */
-  showRestaurantPickerBack?: boolean;
 };
 
-const TabPageHeader: React.FC<TabPageHeaderProps> = ({ title, showRestaurantPickerBack }) => {
+const TabPageHeader: React.FC<TabPageHeaderProps> = ({ title }) => {
   const history = useHistory();
   const isUser = getTokenRole() === 'user';
   const { totalItems } = useCart();
 
-  const goToRestaurantPicker = (): void => {
-    clearCategoryRestaurantId();
-    history.replace('/');
-  };
-
   return (
     <IonHeader>
       <IonToolbar>
-        {showRestaurantPickerBack && (
-          <IonButtons slot="start">
-            <IonButton fill="clear" onClick={goToRestaurantPicker}>
-              <IonIcon icon={chevronBack} />
-            </IonButton>
-          </IonButtons>
-        )}
         <IonTitle>{title}</IonTitle>
         {isUser && (
           <IonButtons slot="end">

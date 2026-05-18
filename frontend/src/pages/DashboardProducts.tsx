@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
-  IonAlert,
   IonContent,
   IonHeader,
   IonPage,
@@ -21,11 +20,11 @@ import {
   IonChip,
   IonSpinner,
 } from '@ionic/react';
-import { arrowBackOutline, trashOutline, addOutline, closeOutline, personOutline } from 'ionicons/icons';
+import { trashOutline, addOutline, closeOutline } from 'ionicons/icons';
 import ProductGrid from '@/components/ProductGrid';
 import api from '@/lib/api';
 import { isAxiosError } from 'axios';
-import { getProfile, removeToken } from '@/lib/auth';
+import { getProfile } from '@/lib/auth';
 import type { Product, User } from '@/types';
 
 interface CategoryItem {
@@ -61,13 +60,13 @@ const EMPTY_FORM: ProductFormData = {
 
 const DashboardProducts: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(EMPTY_FORM);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -77,6 +76,15 @@ const DashboardProducts: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('add') !== '1') return;
+    setEditingProduct(null);
+    setFormData(EMPTY_FORM);
+    setShowModal(true);
+    history.replace('/dashboard/products');
+  }, [location.search, history]);
 
   const fetchData = async () => {
     try {
@@ -197,7 +205,7 @@ const DashboardProducts: React.FC = () => {
   if (!user?.restaurantId) {
     return (
       <IonPage>
-        <IonHeader><IonToolbar><IonTitle>My Products</IonTitle></IonToolbar></IonHeader>
+        <IonHeader><IonToolbar><IonTitle>Main</IonTitle></IonToolbar></IonHeader>
         <IonContent className="ion-padding">
           <p style={{ color: 'var(--ion-color-danger)' }}>No restaurant assigned to your account</p>
         </IonContent>
@@ -209,30 +217,9 @@ const DashboardProducts: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton fill="clear" onClick={() => setShowLogoutConfirm(true)}>
-              <IonIcon icon={arrowBackOutline} />
-            </IonButton>
-          </IonButtons>
-          <IonTitle>Dashboard</IonTitle>
-          <IonButtons slot="end">
-            <IonButton fill="clear" onClick={() => history.push('/my')}>
-              <IonIcon icon={personOutline} />
-            </IonButton>
-          </IonButtons>
+          <IonTitle>Main</IonTitle>
         </IonToolbar>
       </IonHeader>
-
-      <IonAlert
-        isOpen={showLogoutConfirm}
-        onDidDismiss={() => setShowLogoutConfirm(false)}
-        header="Log out"
-        message="Are you sure you want to log out?"
-        buttons={[
-          { text: 'Cancel', role: 'cancel' },
-          { text: 'Logout', handler: () => { removeToken(); history.replace('/'); } },
-        ]}
-      />
 
       <IonContent>
         {loading ? (
@@ -307,14 +294,9 @@ const DashboardProducts: React.FC = () => {
 
             {/* ── Products section ── */}
             <div className="ion-padding" style={{ paddingTop: 8 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-                <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 700 }}>
-                  {selectedCategory === 'All' ? 'All Products' : selectedCategory}
-                </h3>
-                <IonButton size="small" onClick={() => { setEditingProduct(null); setFormData(EMPTY_FORM); setShowModal(true); }}>
-                  <IonIcon icon={addOutline} slot="start" /> Add Product
-                </IonButton>
-              </div>
+              <h3 style={{ margin: '0 0 12px', fontSize: '1rem', fontWeight: 700 }}>
+                {selectedCategory === 'All' ? 'All Products' : selectedCategory}
+              </h3>
 
               {(() => {
                 const filtered = selectedCategory === 'All'

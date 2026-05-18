@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useHistory } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import {
   IonContent,
   IonHeader,
@@ -11,15 +11,11 @@ import {
   IonInput,
   IonTextarea,
   IonButtons,
-  IonAlert,
   IonSpinner,
   IonCard,
   IonCardContent,
-  IonIcon,
 } from '@ionic/react';
-import { personOutline } from 'ionicons/icons';
 import api from '@/lib/api';
-import { removeToken } from '@/lib/auth';
 import type { Restaurant } from '@/types';
 
 const emptyForm = () => ({
@@ -35,17 +31,26 @@ const emptyForm = () => ({
 
 const AdminRestaurants: React.FC = () => {
   const history = useHistory();
+  const location = useLocation();
   const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingRestaurant, setEditingRestaurant] = useState<Restaurant | null>(null);
   const [formData, setFormData] = useState(emptyForm());
-  const [showLogoutAlert, setShowLogoutAlert] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchRestaurants();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('add') !== '1') return;
+    setEditingRestaurant(null);
+    setFormData(emptyForm());
+    setShowModal(true);
+    history.replace('/admin/restaurants');
+  }, [location.search, history]);
 
   const fetchRestaurants = async () => {
     try {
@@ -147,16 +152,7 @@ const AdminRestaurants: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton onClick={() => setShowLogoutAlert(true)}>←</IonButton>
-          </IonButtons>
-          <IonTitle>Manage Restaurants</IonTitle>
-          <IonButtons slot="end">
-            <IonButton onClick={() => history.push('/admin/profile')}>
-              <IonIcon icon={personOutline} />
-            </IonButton>
-            <IonButton onClick={openAdd}>Add</IonButton>
-          </IonButtons>
+          <IonTitle>Main</IonTitle>
         </IonToolbar>
       </IonHeader>
 
@@ -341,17 +337,6 @@ const AdminRestaurants: React.FC = () => {
           </IonContent>
         </IonModal>
       </IonContent>
-
-      <IonAlert
-        isOpen={showLogoutAlert}
-        header="Logout"
-        message="Do you want to logout?"
-        buttons={[
-          { text: 'Cancel', role: 'cancel', handler: () => setShowLogoutAlert(false) },
-          { text: 'Logout', handler: () => { removeToken(); history.replace('/'); } },
-        ]}
-        onDidDismiss={() => setShowLogoutAlert(false)}
-      />
     </IonPage>
   );
 };

@@ -1,7 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useHistory, useLocation } from 'react-router-dom';
 import {
-  IonAlert,
   IonContent,
   IonHeader,
   IonPage,
@@ -16,9 +14,9 @@ import {
   IonModal,
   IonInput,
 } from '@ionic/react';
-import { arrowBackOutline } from 'ionicons/icons';
+import { addOutline } from 'ionicons/icons';
 import api from '@/lib/api';
-import { getProfile, removeToken } from '@/lib/auth';
+import { getProfile } from '@/lib/auth';
 import type { User } from '@/types';
 
 interface CategoryItem {
@@ -27,13 +25,10 @@ interface CategoryItem {
 }
 
 const DashboardCategories: React.FC = () => {
-  const history = useHistory();
-  const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
 
   useEffect(() => {
@@ -106,41 +101,16 @@ const DashboardCategories: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton fill="clear" onClick={() => setShowLogoutConfirm(true)} aria-label="Log out">
-              <IonIcon icon={arrowBackOutline} />
-            </IonButton>
-            <IonButton
-              fill={location.pathname === '/dashboard/products' ? 'solid' : 'clear'}
-              color={location.pathname === '/dashboard/products' ? 'primary' : undefined}
-              onClick={() => history.push('/dashboard/products')}
-            >
-              Products
-            </IonButton>
-            <IonButton
-              fill={location.pathname === '/dashboard/categories' ? 'solid' : 'clear'}
-              color={location.pathname === '/dashboard/categories' ? 'primary' : undefined}
-              onClick={() => history.push('/dashboard/categories')}
-            >
-              Categories
-            </IonButton>
-          </IonButtons>
-          <IonButtons slot="end">
-            <IonButton onClick={() => { setNewCategoryName(''); setShowModal(true); }}>Add</IonButton>
-          </IonButtons>
+          <IonTitle>Categories</IonTitle>
         </IonToolbar>
       </IonHeader>
-      <IonAlert
-        isOpen={showLogoutConfirm}
-        onDidDismiss={() => setShowLogoutConfirm(false)}
-        header="Log out"
-        message="Are you sure you want to log out?"
-        buttons={[
-          { text: 'Cancel', role: 'cancel' },
-          { text: 'Logout', handler: () => { removeToken(); history.replace('/'); } },
-        ]}
-      />
       <IonContent className="ion-padding">
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <IonButton size="small" onClick={() => { setNewCategoryName(''); setShowModal(true); }}>
+            <IonIcon icon={addOutline} slot="start" />
+            Add category
+          </IonButton>
+        </div>
         {loading ? (
           <p className="ion-text-center">Loading...</p>
         ) : categories.length === 0 ? (

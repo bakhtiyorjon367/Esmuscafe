@@ -6,7 +6,6 @@ import {
   IonHeader,
   IonToolbar,
   IonTitle,
-  IonButtons,
   IonButton,
   IonInput,
   IonSpinner,
@@ -82,13 +81,7 @@ const AdminProfile: React.FC = () => {
     <IonPage>
       <IonHeader>
         <IonToolbar>
-          <IonButtons slot="start">
-            <IonButton onClick={() => history.goBack()}>Back</IonButton>
-          </IonButtons>
-          <IonTitle>My Account</IonTitle>
-          <IonButtons slot="end">
-            <IonButton color="danger" onClick={handleLogout}>Logout</IonButton>
-          </IonButtons>
+          <IonTitle>Profile</IonTitle>
         </IonToolbar>
       </IonHeader>
 
@@ -132,6 +125,16 @@ const AdminProfile: React.FC = () => {
             {saving ? <IonSpinner name="dots" /> : 'Save Changes'}
           </IonButton>
         </form>
+
+        <IonButton
+          expand="block"
+          fill="outline"
+          color="danger"
+          style={{ marginTop: 24 }}
+          onClick={handleLogout}
+        >
+          Log out
+        </IonButton>
       </IonContent>
 
       <IonToast
