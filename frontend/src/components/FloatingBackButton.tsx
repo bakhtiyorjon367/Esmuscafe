@@ -10,17 +10,24 @@ type FloatingBackButtonProps = {
   aboveTabBar?: boolean;
   /** Clears selected restaurant and returns to the home restaurant list. */
   restaurantPicker?: boolean;
+  /** Custom back action (e.g. close a modal). */
+  onBack?: () => void;
 };
 
 const FloatingBackButton: React.FC<FloatingBackButtonProps> = ({
   defaultHref = '/',
   aboveTabBar = true,
   restaurantPicker = false,
+  onBack,
 }) => {
   const router = useIonRouter();
   const history = useHistory();
 
   const handleClick = (): void => {
+    if (onBack) {
+      onBack();
+      return;
+    }
     if (restaurantPicker) {
       clearCategoryRestaurantId();
       history.replace('/');

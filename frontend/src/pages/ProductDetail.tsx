@@ -120,6 +120,8 @@ const ProductDetail: React.FC = () => {
     product &&
     restaurantIdString(product.restaurantId) === myUser.restaurantId;
 
+  const backHref = myUser?.role === 'restaurant_owner' ? '/dashboard/products' : '/main';
+
   const handleLike = async () => {
     if (!loggedIn) { history.replace(`/login?redirect=${encodeURIComponent(history.location.pathname)}`); return; }
     try {
@@ -264,7 +266,7 @@ const ProductDetail: React.FC = () => {
         <IonContent>
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 40 }}><IonSpinner /></div>
         </IonContent>
-        <FloatingBackButton defaultHref="/main" />
+        <FloatingBackButton defaultHref={backHref} />
       </IonPage>
     );
   }
@@ -278,7 +280,7 @@ const ProductDetail: React.FC = () => {
           </IonToolbar>
         </IonHeader>
         <IonContent className="ion-padding"><p>Product not found.</p></IonContent>
-        <FloatingBackButton defaultHref="/main" />
+        <FloatingBackButton defaultHref={backHref} />
       </IonPage>
     );
   }
@@ -500,7 +502,7 @@ const ProductDetail: React.FC = () => {
           </IonContent>
         </IonModal>
       </IonContent>
-      <FloatingBackButton defaultHref="/main" />
+      <FloatingBackButton defaultHref={backHref} aboveTabBar={false} />
     </IonPage>
   );
 };

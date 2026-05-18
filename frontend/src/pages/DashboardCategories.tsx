@@ -15,6 +15,7 @@ import {
   IonInput,
 } from '@ionic/react';
 import { addOutline } from 'ionicons/icons';
+import FloatingBackButton from '@/components/FloatingBackButton';
 import api from '@/lib/api';
 import { getProfile } from '@/lib/auth';
 import type { User } from '@/types';
@@ -149,6 +150,12 @@ const DashboardCategories: React.FC = () => {
               <IonButton type="submit" expand="block" className="ion-margin-top">Save</IonButton>
             </form>
           </IonContent>
+          {showModal && (
+            <FloatingBackButton
+              aboveTabBar={false}
+              onBack={() => setShowModal(false)}
+            />
+          )}
         </IonModal>
       </IonContent>
     </IonPage>

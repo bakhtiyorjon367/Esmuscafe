@@ -1,8 +1,10 @@
 import { IonIcon, IonLabel, IonTabBar, IonTabButton } from '@ionic/react';
 import { homeOutline, gridOutline, personOutline, addOutline, listOutline, restaurantOutline } from 'ionicons/icons';
-import { useLocation } from 'react-router-dom';
+import { useHistory, useLocation } from 'react-router-dom';
 import { isAuthenticated } from '@/lib/auth';
 import { isAdmin, isRestaurantOwner, shouldShowBottomNav } from '@/lib/bottomNavRoutes';
+import { dispatchAdminOpenAddRestaurant } from '@/lib/adminDashboard';
+import { dispatchOwnerOpenAddProduct } from '@/lib/ownerDashboard';
 
 const TAB_ICON_STYLE = { fontSize: 22, marginBottom: 2 } as const;
 
@@ -28,8 +30,17 @@ const UserBottomNav: React.FC = () => {
 };
 
 const OwnerBottomNav: React.FC = () => {
+  const history = useHistory();
   const { pathname, search } = useLocation();
   const addActive = pathname === '/dashboard/products' && new URLSearchParams(search).get('add') === '1';
+
+  const handleAddProduct = () => {
+    if (pathname === '/dashboard/products' && addActive) {
+      dispatchOwnerOpenAddProduct();
+      return;
+    }
+    history.push('/dashboard/products?add=1');
+  };
 
   return (
     <IonTabBar slot="bottom">
@@ -41,7 +52,7 @@ const OwnerBottomNav: React.FC = () => {
         <IonIcon icon={listOutline} style={TAB_ICON_STYLE} />
         <IonLabel>Categories</IonLabel>
       </IonTabButton>
-      <IonTabButton tab="owner-add" href="/dashboard/products?add=1" selected={addActive}>
+      <IonTabButton tab="owner-add" selected={addActive} onClick={handleAddProduct}>
         <IonIcon icon={addOutline} style={TAB_ICON_STYLE} />
         <IonLabel>Add</IonLabel>
       </IonTabButton>
@@ -54,8 +65,17 @@ const OwnerBottomNav: React.FC = () => {
 };
 
 const AdminBottomNav: React.FC = () => {
+  const history = useHistory();
   const { pathname, search } = useLocation();
   const addActive = pathname === '/admin/restaurants' && new URLSearchParams(search).get('add') === '1';
+
+  const handleAddRestaurant = () => {
+    if (pathname === '/admin/restaurants' && addActive) {
+      dispatchAdminOpenAddRestaurant();
+      return;
+    }
+    history.push('/admin/restaurants?add=1');
+  };
 
   return (
     <IonTabBar slot="bottom">
@@ -63,7 +83,7 @@ const AdminBottomNav: React.FC = () => {
         <IonIcon icon={restaurantOutline} style={TAB_ICON_STYLE} />
         <IonLabel>Main</IonLabel>
       </IonTabButton>
-      <IonTabButton tab="admin-add" href="/admin/restaurants?add=1" selected={addActive}>
+      <IonTabButton tab="admin-add" selected={addActive} onClick={handleAddRestaurant}>
         <IonIcon icon={addOutline} style={TAB_ICON_STYLE} />
         <IonLabel>Add</IonLabel>
       </IonTabButton>

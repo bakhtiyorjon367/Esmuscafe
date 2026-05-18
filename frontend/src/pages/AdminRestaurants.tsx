@@ -16,6 +16,7 @@ import {
   IonCardContent,
 } from '@ionic/react';
 import api from '@/lib/api';
+import { listenAdminOpenAddRestaurant } from '@/lib/adminDashboard';
 import type { Restaurant } from '@/types';
 
 const emptyForm = () => ({
@@ -39,6 +40,21 @@ const AdminRestaurants: React.FC = () => {
   const [formData, setFormData] = useState(emptyForm());
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
+  const openAddRestaurantModal = () => {
+    setEditingRestaurant(null);
+    setFormData(emptyForm());
+    setShowModal(true);
+  };
+
+  const closeRestaurantModal = () => {
+    setShowModal(false);
+    setEditingRestaurant(null);
+    setFormData(emptyForm());
+    if (new URLSearchParams(location.search).get('add') === '1') {
+      history.replace('/admin/restaurants');
+    }
+  };
+
   useEffect(() => {
     fetchRestaurants();
   }, []);
@@ -46,11 +62,10 @@ const AdminRestaurants: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('add') !== '1') return;
-    setEditingRestaurant(null);
-    setFormData(emptyForm());
-    setShowModal(true);
-    history.replace('/admin/restaurants');
-  }, [location.search, history]);
+    openAddRestaurantModal();
+  }, [location.search]);
+
+  useEffect(() => listenAdminOpenAddRestaurant(openAddRestaurantModal), []);
 
   const fetchRestaurants = async () => {
     try {
@@ -91,9 +106,7 @@ const AdminRestaurants: React.FC = () => {
           ownerPassword: formData.ownerPassword,
         });
       }
-      setShowModal(false);
-      setEditingRestaurant(null);
-      setFormData(emptyForm());
+      closeRestaurantModal();
       fetchRestaurants();
     } catch (error) {
       console.error('Failed to save restaurant:', error);
@@ -138,12 +151,6 @@ const AdminRestaurants: React.FC = () => {
     } finally {
       setTogglingId(null);
     }
-  };
-
-  const openAdd = () => {
-    setEditingRestaurant(null);
-    setFormData(emptyForm());
-    setShowModal(true);
   };
 
   const isEdit = !!editingRestaurant;
@@ -229,12 +236,12 @@ const AdminRestaurants: React.FC = () => {
           </div>
         )}
 
-        <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)}>
+        <IonModal isOpen={showModal} onDidDismiss={closeRestaurantModal}>
           <IonHeader>
             <IonToolbar>
               <IonTitle>{isEdit ? 'Edit Restaurant' : 'Add Restaurant'}</IonTitle>
               <IonButtons slot="end">
-                <IonButton onClick={() => setShowModal(false)}>Cancel</IonButton>
+                <IonButton onClick={closeRestaurantModal}>Cancel</IonButton>
               </IonButtons>
             </IonToolbar>
           </IonHeader>

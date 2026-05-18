@@ -4,6 +4,7 @@ import {
   IonCardHeader,
   IonCardTitle,
   IonImg,
+  IonRouterLink,
   IonSkeletonText,
   IonText,
   IonIcon,
@@ -83,14 +84,23 @@ const ProductGrid: React.FC<ProductGridProps> = ({
             button={!ownerActions}
             routerLink={ownerActions ? undefined : link}
             style={{ margin: 0 }}
-            onClick={ownerActions ? () => ownerActions.onEdit(product) : undefined}
           >
             {product.image && (
-              <IonImg
-                src={productThumbSrcForDisplay(product.image)}
-                alt={product.name}
-                style={{ width: '100%', height: 140, objectFit: 'cover' }}
-              />
+              ownerActions ? (
+                <IonRouterLink routerLink={link}>
+                  <IonImg
+                    src={productThumbSrcForDisplay(product.image)}
+                    alt={product.name}
+                    style={{ width: '100%', height: 140, objectFit: 'cover', display: 'block' }}
+                  />
+                </IonRouterLink>
+              ) : (
+                <IonImg
+                  src={productThumbSrcForDisplay(product.image)}
+                  alt={product.name}
+                  style={{ width: '100%', height: 140, objectFit: 'cover' }}
+                />
+              )
             )}
             <IonCardHeader style={{ paddingBottom: 4 }}>
               <IonCardTitle style={{ fontSize: 14, lineHeight: 1.25 }}>{product.name}</IonCardTitle>

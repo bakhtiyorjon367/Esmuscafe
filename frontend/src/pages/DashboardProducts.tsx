@@ -8,7 +8,6 @@ import {
   IonToolbar,
   IonButton,
   IonButtons,
-  IonIcon,
   IonModal,
   IonInput,
   IonTextarea,
@@ -20,11 +19,10 @@ import {
   IonChip,
   IonSpinner,
 } from '@ionic/react';
-import { trashOutline, addOutline, closeOutline } from 'ionicons/icons';
+import { listenOwnerOpenAddProduct } from '@/lib/ownerDashboard';
 import ProductGrid from '@/components/ProductGrid';
 import ProductImagePicker from '@/components/ProductImagePicker';
 import api from '@/lib/api';
-import { isAxiosError } from 'axios';
 import { getProfile } from '@/lib/auth';
 import { IMAGE_COMPRESS_FAILED } from '@/lib/compress-image-for-upload';
 import { uploadProductImage } from '@/lib/upload-product-image';
@@ -69,19 +67,33 @@ const DashboardProducts: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(EMPTY_FORM);
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
   const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
-  const [newCategoryName, setNewCategoryName] = useState('');
-  const [catLoading, setCatLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   const resetImageState = () => {
     if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
     setPendingImageFile(null);
     setPendingPreviewUrl(null);
+  };
+
+  const openAddProductModal = () => {
+    resetImageState();
+    setEditingProduct(null);
+    setFormData(EMPTY_FORM);
+    setShowModal(true);
+  };
+
+  const closeProductModal = () => {
+    setShowModal(false);
+    setEditingProduct(null);
+    setFormData(EMPTY_FORM);
+    resetImageState();
+    if (new URLSearchParams(location.search).get('add') === '1') {
+      history.replace('/dashboard/products');
+    }
   };
 
   useEffect(() => {
@@ -91,12 +103,10 @@ const DashboardProducts: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('add') !== '1') return;
-    resetImageState();
-    setEditingProduct(null);
-    setFormData(EMPTY_FORM);
-    setShowModal(true);
-    history.replace('/dashboard/products');
-  }, [location.search, history]);
+    openAddProductModal();
+  }, [location.search]);
+
+  useEffect(() => listenOwnerOpenAddProduct(openAddProductModal), []);
 
   const fetchData = async () => {
     try {
@@ -114,34 +124,6 @@ const DashboardProducts: React.FC = () => {
       console.error('Failed to fetch data:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleAddCategory = async () => {
-    if (!newCategoryName.trim() || !user?.restaurantId) return;
-    setCatLoading(true);
-    try {
-      await api.post('/categories', { name: newCategoryName.trim(), restaurantId: user.restaurantId });
-      setNewCategoryName('');
-      const res = await api.get(`/categories?restaurantId=${user.restaurantId}`);
-      setCategories(res.data ?? []);
-    } catch (err: unknown) {
-      const msg = isAxiosError(err)
-        ? (err.response?.data as { message?: string } | undefined)?.message
-        : undefined;
-      alert(msg ?? 'Failed to add category');
-    } finally {
-      setCatLoading(false);
-    }
-  };
-
-  const handleDeleteCategory = async (id: string) => {
-    if (!confirm('Delete this category?')) return;
-    try {
-      await api.delete(`/categories/${id}`);
-      setCategories((prev) => prev.filter((c) => c._id !== id));
-    } catch {
-      alert('Failed to delete category');
     }
   };
 
@@ -197,10 +179,7 @@ const DashboardProducts: React.FC = () => {
       if (pendingImageFile) {
         await uploadProductImage(productId, pendingImageFile);
       }
-      resetImageState();
-      setShowModal(false);
-      setEditingProduct(null);
-      setFormData(EMPTY_FORM);
+      closeProductModal();
       fetchData();
     } catch (error) {
       console.error('Failed to save product:', error);
@@ -274,27 +253,6 @@ const DashboardProducts: React.FC = () => {
           <>
             {/* ── Category filter bar ── */}
             <div style={{ display: 'flex', gap: 8, overflowX: 'auto', padding: '12px 16px 8px', scrollbarWidth: 'none' }}>
-              {/* + button to manage categories */}
-              <button
-                onClick={() => setShowCategoryModal(true)}
-                style={{
-                  flexShrink: 0,
-                  width: 36,
-                  height: 36,
-                  borderRadius: '50%',
-                  border: '2px dashed var(--ion-color-primary)',
-                  background: 'transparent',
-                  color: 'var(--ion-color-primary)',
-                  fontSize: '1.3rem',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                }}
-              >
-                +
-              </button>
-
               {/* All filter */}
               <button
                 onClick={() => setSelectedCategory('All')}
@@ -360,65 +318,14 @@ const DashboardProducts: React.FC = () => {
           </>
         )}
 
-        {/* ── Category management modal ── */}
-        <IonModal isOpen={showCategoryModal} onDidDismiss={() => setShowCategoryModal(false)}>
-          <IonHeader>
-            <IonToolbar>
-              <IonTitle>Categories</IonTitle>
-              <IonButtons slot="end">
-                <IonButton onClick={() => setShowCategoryModal(false)}>
-                  <IonIcon icon={closeOutline} />
-                </IonButton>
-              </IonButtons>
-            </IonToolbar>
-          </IonHeader>
-          <IonContent className="ion-padding">
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
-              <IonInput
-                value={newCategoryName}
-                onIonInput={(e) => setNewCategoryName(String((e.target as HTMLIonInputElement).value ?? ''))}
-                placeholder="New category name"
-                style={{ flex: 1, border: '1px solid var(--ion-color-light-shade)', borderRadius: 8, padding: '4px 10px' }}
-              />
-              <IonButton size="small" onClick={handleAddCategory} disabled={catLoading || !newCategoryName.trim()}>
-                <IonIcon icon={addOutline} slot="icon-only" />
-              </IonButton>
-            </div>
-
-            {categories.length === 0 ? (
-              <p style={{ color: 'var(--ion-color-medium)', fontSize: '0.85rem' }}>No categories yet. Add one above.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {categories.map((cat) => (
-                  <div
-                    key={cat._id}
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      background: 'var(--ion-color-light)',
-                      borderRadius: 12,
-                      padding: '10px 14px',
-                    }}
-                  >
-                    <span style={{ fontSize: '0.95rem', fontWeight: 500 }}>{cat.name}</span>
-                    <IonButton fill="clear" size="small" color="danger" onClick={() => handleDeleteCategory(cat._id)}>
-                      <IonIcon icon={trashOutline} slot="icon-only" />
-                    </IonButton>
-                  </div>
-                ))}
-              </div>
-            )}
-          </IonContent>
-        </IonModal>
 
         {/* ── Product form modal ── */}
-        <IonModal isOpen={showModal} onDidDismiss={() => setShowModal(false)}>
+        <IonModal isOpen={showModal} onDidDismiss={closeProductModal}>
           <IonHeader>
             <IonToolbar>
               <IonTitle>{editingProduct ? 'Edit Product' : 'Add Product'}</IonTitle>
               <IonButtons slot="end">
-                <IonButton onClick={() => setShowModal(false)}>Cancel</IonButton>
+                <IonButton onClick={closeProductModal}>Cancel</IonButton>
               </IonButtons>
             </IonToolbar>
           </IonHeader>
