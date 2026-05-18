@@ -39,4 +39,33 @@ api.interceptors.response.use(
   },
 );
 
+/** POST multipart/form-data with JWT (no JSON Content-Type). */
+export async function postFormData<T>(path: string, formData: FormData): Promise<T> {
+  const baseURL = getBaseURL();
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const response = await fetch(`${baseURL}${path}`, {
+    method: 'POST',
+    headers: {
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    let message = errorText || `Request failed with ${response.status}`;
+    try {
+      const parsed = JSON.parse(errorText) as { message?: string | string[] };
+      if (parsed.message) {
+        message = Array.isArray(parsed.message) ? parsed.message.join(', ') : parsed.message;
+      }
+    } catch {
+      /* keep raw text */
+    }
+    throw new Error(message);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export default api;

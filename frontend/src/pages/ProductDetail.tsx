@@ -24,6 +24,10 @@ import {
 import { heart, heartOutline, sendOutline, trashOutline, createOutline } from 'ionicons/icons';
 import api from '@/lib/api';
 import { isAuthenticated } from '@/lib/auth';
+import ProductImagePicker from '@/components/ProductImagePicker';
+import { IMAGE_COMPRESS_FAILED } from '@/lib/compress-image-for-upload';
+import { productImageSrcForDisplay } from '@/lib/product-images';
+import { uploadProductImage } from '@/lib/upload-product-image';
 import type { Product, Comment, User, Restaurant } from '@/types';
 import { useReadyCountdown, formatReadyAt } from '@/hooks/useReadyCountdown';
 import FloatingBackButton from '@/components/FloatingBackButton';
@@ -70,6 +74,8 @@ const ProductDetail: React.FC = () => {
   // Owner edit modal
   const [showEditModal, setShowEditModal] = useState(false);
   const [formData, setFormData] = useState<ProductFormData>(EMPTY_FORM);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const [categories, setCategories] = useState<CategoryItem[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -150,8 +156,26 @@ const ProductDetail: React.FC = () => {
     }
   };
 
+  const resetImageState = () => {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setPendingImageFile(null);
+    setPendingPreviewUrl(null);
+  };
+
+  const handlePickImage = (file: File) => {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setPendingImageFile(file);
+    setPendingPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleClearImage = () => {
+    resetImageState();
+    setFormData((prev) => ({ ...prev, image: '' }));
+  };
+
   const openEditModal = () => {
     if (!product) return;
+    resetImageState();
     setFormData({
       name: product.name,
       description: product.description,
@@ -173,24 +197,40 @@ const ProductDetail: React.FC = () => {
     const price = Number(formData.price);
     const discount = Number(formData.discount);
     if (isNaN(price) || price < 0 || isNaN(discount) || discount < 0) return;
+    if (!pendingImageFile && !formData.image) {
+      alert('Please choose a product photo');
+      return;
+    }
     setSaving(true);
     try {
-      const res = await api.patch(`/products/${product._id}`, {
+      const basePayload = {
         name: formData.name,
         description: formData.description,
         ingredients: formData.ingredients,
         price,
         discount,
-        image: formData.image,
         category: formData.category,
         isAvailable: formData.isAvailable,
         readyAt: formData.readyAt === '' ? null : Number(formData.readyAt),
         tags: formData.tags,
-      });
-      setProduct(res.data);
+      };
+      const patchPayload = pendingImageFile
+        ? basePayload
+        : { ...basePayload, image: formData.image };
+      const res = await api.patch(`/products/${product._id}`, patchPayload);
+      let updated = res.data as Product;
+      if (pendingImageFile) {
+        const url = await uploadProductImage(product._id, pendingImageFile);
+        updated = { ...updated, image: url };
+      }
+      setProduct(updated);
+      resetImageState();
       setShowEditModal(false);
-    } catch {
-      alert('Failed to save product');
+    } catch (error) {
+      const msg = error instanceof Error && error.message === IMAGE_COMPRESS_FAILED
+        ? 'Could not prepare the photo for upload. Try another image.'
+        : error instanceof Error ? error.message : 'Failed to save product';
+      alert(msg);
     } finally {
       setSaving(false);
     }
@@ -267,7 +307,7 @@ const ProductDetail: React.FC = () => {
         {/* Product image */}
         <div style={{ position: 'relative', width: '100%', height: 240 }}>
           <img
-            src={product.image}
+            src={productImageSrcForDisplay(product.image)}
             alt={product.name}
             style={{ width: '100%', height: '100%', objectFit: 'cover', filter: !isReady ? 'blur(4px) brightness(0.55)' : undefined }}
           />
@@ -416,10 +456,12 @@ const ProductDetail: React.FC = () => {
                 <IonInput type="number" min="0" step="1" inputmode="numeric" value={formData.discount}
                   onIonInput={(e) => { const v = String((e.target as HTMLIonInputElement).value ?? ''); setFormData({ ...formData, discount: v === '' ? 0 : parseInt(v, 10) || 0 }); }} />
               </IonItem>
-              <IonItem>
-                <IonLabel position="stacked">Image URL *</IonLabel>
-                <IonInput type="url" value={formData.image} onIonInput={(e) => setFormData({ ...formData, image: String((e.target as HTMLIonInputElement).value ?? '') })} required />
-              </IonItem>
+              <ProductImagePicker
+                storedImagePath={formData.image}
+                previewUrl={pendingPreviewUrl}
+                onPick={handlePickImage}
+                onClear={handleClearImage}
+              />
               <IonItem>
                 <IonLabel position="stacked">Category *</IonLabel>
                 {categories.length === 0 ? (

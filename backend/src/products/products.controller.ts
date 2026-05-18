@@ -1,4 +1,19 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UploadedFile,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -43,6 +58,31 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   toggleLike(@Param('id') id: string, @CurrentUser() user: any) {
     return this.productsService.toggleLike(id, user.userId);
+  }
+
+  @Post(':id/image')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.RESTAURANT_OWNER)
+  @UseInterceptors(
+    FileInterceptor('image', {
+      storage: memoryStorage(),
+      limits: { fileSize: 12 * 1024 * 1024 },
+      fileFilter: (_req, file, cb) => {
+        const allowed = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+        if (!allowed.has(file.mimetype)) {
+          cb(new BadRequestException('Allowed types: JPEG, PNG, GIF, WebP') as unknown as Error, false);
+          return;
+        }
+        cb(null, true);
+      },
+    }),
+  )
+  uploadImage(
+    @Param('id') id: string,
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: any,
+  ) {
+    return this.productsService.uploadProductImage(id, file, user).then((result) => ({ data: result }));
   }
 
   @Patch(':id')

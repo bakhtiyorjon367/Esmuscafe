@@ -22,9 +22,12 @@ import {
 } from '@ionic/react';
 import { trashOutline, addOutline, closeOutline } from 'ionicons/icons';
 import ProductGrid from '@/components/ProductGrid';
+import ProductImagePicker from '@/components/ProductImagePicker';
 import api from '@/lib/api';
 import { isAxiosError } from 'axios';
 import { getProfile } from '@/lib/auth';
+import { IMAGE_COMPRESS_FAILED } from '@/lib/compress-image-for-upload';
+import { uploadProductImage } from '@/lib/upload-product-image';
 import type { Product, User } from '@/types';
 
 interface CategoryItem {
@@ -69,9 +72,17 @@ const DashboardProducts: React.FC = () => {
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [formData, setFormData] = useState<ProductFormData>(EMPTY_FORM);
+  const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
+  const [pendingPreviewUrl, setPendingPreviewUrl] = useState<string | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [catLoading, setCatLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
+
+  const resetImageState = () => {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setPendingImageFile(null);
+    setPendingPreviewUrl(null);
+  };
 
   useEffect(() => {
     fetchData();
@@ -80,6 +91,7 @@ const DashboardProducts: React.FC = () => {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     if (params.get('add') !== '1') return;
+    resetImageState();
     setEditingProduct(null);
     setFormData(EMPTY_FORM);
     setShowModal(true);
@@ -133,6 +145,17 @@ const DashboardProducts: React.FC = () => {
     }
   };
 
+  const handlePickImage = (file: File) => {
+    if (pendingPreviewUrl) URL.revokeObjectURL(pendingPreviewUrl);
+    setPendingImageFile(file);
+    setPendingPreviewUrl(URL.createObjectURL(file));
+  };
+
+  const handleClearImage = () => {
+    resetImageState();
+    setFormData((prev) => ({ ...prev, image: '' }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.restaurantId) { alert('No restaurant assigned'); return; }
@@ -140,6 +163,10 @@ const DashboardProducts: React.FC = () => {
     const discount = Number(formData.discount);
     if (isNaN(price) || price < 0) { alert('Please enter a valid price'); return; }
     if (isNaN(discount) || discount < 0) { alert('Please enter a valid discount'); return; }
+    if (!pendingImageFile && !formData.image) {
+      alert('Please choose a product photo');
+      return;
+    }
     try {
       const basePayload = {
         name: formData.name,
@@ -147,28 +174,45 @@ const DashboardProducts: React.FC = () => {
         ingredients: formData.ingredients,
         price,
         discount,
-        image: formData.image,
         category: formData.category,
         isAvailable: formData.isAvailable,
         readyAt: formData.readyAt === '' ? null : Number(formData.readyAt),
         tags: formData.tags,
       };
+      let productId: string;
       if (editingProduct) {
-        await api.patch(`/products/${editingProduct._id}`, basePayload);
+        const patchPayload = pendingImageFile
+          ? basePayload
+          : { ...basePayload, image: formData.image };
+        await api.patch(`/products/${editingProduct._id}`, patchPayload);
+        productId = editingProduct._id;
       } else {
-        await api.post('/products', { ...basePayload, restaurantId: user.restaurantId });
+        const res = await api.post('/products', {
+          ...basePayload,
+          image: formData.image || '',
+          restaurantId: user.restaurantId,
+        });
+        productId = res.data._id;
       }
+      if (pendingImageFile) {
+        await uploadProductImage(productId, pendingImageFile);
+      }
+      resetImageState();
       setShowModal(false);
       setEditingProduct(null);
       setFormData(EMPTY_FORM);
       fetchData();
     } catch (error) {
       console.error('Failed to save product:', error);
-      alert('Failed to save product');
+      const msg = error instanceof Error && error.message === IMAGE_COMPRESS_FAILED
+        ? 'Could not prepare the photo for upload. Try another image.'
+        : error instanceof Error ? error.message : 'Failed to save product';
+      alert(msg);
     }
   };
 
   const handleEdit = (product: Product) => {
+    resetImageState();
     setEditingProduct(product);
     setFormData({
       name: product.name,
@@ -425,10 +469,12 @@ const DashboardProducts: React.FC = () => {
                   }}
                 />
               </IonItem>
-              <IonItem>
-                <IonLabel position="stacked">Image URL *</IonLabel>
-                <IonInput type="url" value={formData.image} onIonInput={(e) => setFormData({ ...formData, image: String((e.target as HTMLIonInputElement).value ?? '') })} required />
-              </IonItem>
+              <ProductImagePicker
+                storedImagePath={formData.image}
+                previewUrl={pendingPreviewUrl}
+                onPick={handlePickImage}
+                onClear={handleClearImage}
+              />
               <IonItem>
                 <IonLabel position="stacked">Category *</IonLabel>
                 {categories.length === 0 ? (

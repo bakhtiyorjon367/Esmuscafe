@@ -23,7 +23,7 @@ export class Product {
   @Prop({ default: 0 })
   discount: number;
 
-  @Prop({ required: true })
+  @Prop({ default: '' })
   image: string;
 
   @Prop({ required: true })

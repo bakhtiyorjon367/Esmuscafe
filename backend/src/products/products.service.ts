@@ -1,10 +1,15 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { mkdir } from 'fs/promises';
+import * as path from 'path';
+import { BadRequestException, Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import sharp from 'sharp';
 import { Product, ProductDocument } from './schemas/product.schema';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { Role } from '../libs/enums/role.enum';
+import { getProductsUploadAbsoluteDir, PRODUCT_UPLOAD_PUBLIC_PREFIX } from '../libs/product-upload.paths';
 
 @Injectable()
 export class ProductsService {
@@ -104,5 +109,62 @@ export class ProductsService {
     await this.productModel.findByIdAndUpdate(productId, {
       $inc: { commentCount: delta },
     });
+  }
+
+  private assertOwnerAccess(product: ProductDocument, user: { role: Role; restaurantId?: Types.ObjectId | string }) {
+    if (user.role === Role.RESTAURANT_OWNER) {
+      if (product.restaurantId.toString() !== user.restaurantId?.toString()) {
+        throw new ForbiddenException('You can only manage products for your own restaurant');
+      }
+    }
+  }
+
+  /**
+   * Saves an uploaded image buffer to disk (WebP + 80×80 thumb) and sets product.image.
+   */
+  async uploadProductImage(
+    productId: string,
+    file: Express.Multer.File,
+    user: { role: Role; restaurantId?: Types.ObjectId | string },
+  ): Promise<{ url: string }> {
+    if (!file) {
+      throw new BadRequestException('No image file');
+    }
+
+    const product = await this.productModel.findById(productId);
+    if (!product) {
+      throw new NotFoundException('Product not found');
+    }
+    this.assertOwnerAccess(product, user);
+
+    const dir = getProductsUploadAbsoluteDir();
+    await mkdir(dir, { recursive: true });
+
+    const id = randomUUID();
+    const base = `${id}.webp`;
+    const thumbBase = `${id}_thumb.webp`;
+    const dest = path.join(dir, base);
+    const destThumb = path.join(dir, thumbBase);
+
+    try {
+      await sharp(file.buffer)
+        .rotate()
+        .webp({ quality: 86 })
+        .resize({ width: 1600, height: 1600, fit: 'inside', withoutEnlargement: true })
+        .toFile(dest);
+
+      await sharp(file.buffer)
+        .rotate()
+        .resize(80, 80, { fit: 'cover' })
+        .webp({ quality: 82 })
+        .toFile(destThumb);
+    } catch {
+      throw new BadRequestException('Could not process image; use JPEG, PNG, GIF, or WebP');
+    }
+
+    const url = `${PRODUCT_UPLOAD_PUBLIC_PREFIX}/${base}`;
+    product.image = url;
+    await product.save();
+    return { url };
   }
 }

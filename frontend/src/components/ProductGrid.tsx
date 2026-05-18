@@ -10,6 +10,7 @@ import {
   IonButton,
 } from '@ionic/react';
 import { createOutline, trashOutline } from 'ionicons/icons';
+import { productThumbSrcForDisplay } from '@/lib/product-images';
 import type { Product } from '@/types';
 
 interface OwnerActions {
@@ -86,7 +87,7 @@ const ProductGrid: React.FC<ProductGridProps> = ({
           >
             {product.image && (
               <IonImg
-                src={product.image}
+                src={productThumbSrcForDisplay(product.image)}
                 alt={product.name}
                 style={{ width: '100%', height: 140, objectFit: 'cover' }}
               />
