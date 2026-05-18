@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { IonSpinner } from '@ionic/react';
-import { getToken, removeToken, getProfile } from '@/lib/auth';
+import { getToken, removeToken, getProfile, tryTelegramAutoLogin } from '@/lib/auth';
+import { isTelegramWebApp } from '@/lib/telegramWebApp';
 
 interface AuthGuardProps {
   children: React.ReactNode;
@@ -21,7 +22,11 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireAuth }) =
     }
 
     const check = async () => {
-      const token = getToken();
+      let token = getToken();
+      if (!token && isTelegramWebApp()) {
+        await tryTelegramAutoLogin();
+        token = getToken();
+      }
       if (!token) {
         history.replace('/login');
         setLoading(false);
@@ -31,6 +36,11 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({ children, requireAuth }) =
         await getProfile();
       } catch {
         removeToken();
+        if (isTelegramWebApp() && (await tryTelegramAutoLogin())) {
+          setAllowed(true);
+          setLoading(false);
+          return;
+        }
         history.replace('/login');
         setLoading(false);
         return;

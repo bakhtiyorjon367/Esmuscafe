@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   IonContent,
   IonHeader,
@@ -16,7 +16,8 @@ import {
 } from '@ionic/react';
 import { arrowBackOutline } from 'ionicons/icons';
 import { useHistory } from 'react-router-dom';
-import { login, signup, saveToken } from '@/lib/auth';
+import { login, signup, saveToken, tryTelegramAutoLogin, getToken } from '@/lib/auth';
+import { isTelegramWebApp } from '@/lib/telegramWebApp';
 
 const Login: React.FC = () => {
   const history = useHistory();
@@ -28,6 +29,22 @@ const Login: React.FC = () => {
   const [error, setError] = useState('');
   const [hasError, setHasError] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [telegramLoading, setTelegramLoading] = useState(isTelegramWebApp());
+
+  useEffect(() => {
+    if (!isTelegramWebApp() || getToken()) {
+      setTelegramLoading(false);
+      return;
+    }
+    (async () => {
+      const ok = await tryTelegramAutoLogin();
+      if (ok) {
+        history.replace(redirectTo);
+        return;
+      }
+      setTelegramLoading(false);
+    })();
+  }, [history, redirectTo]);
 
   const resetForm = () => {
     setNickname('');
@@ -105,6 +122,11 @@ const Login: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent className="ion-padding">
+        {telegramLoading ? (
+          <div style={{ display: 'flex', justifyContent: 'center', marginTop: '4rem' }}>
+            <IonText>Signing in with Telegram…</IonText>
+          </div>
+        ) : (
         <div style={{ maxWidth: 400, margin: '2rem auto' }}>
           <IonSegment
             value={tab}
@@ -195,6 +217,7 @@ const Login: React.FC = () => {
             </form>
           )}
         </div>
+        )}
       </IonContent>
     </IonPage>
   );

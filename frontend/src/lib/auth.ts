@@ -1,4 +1,5 @@
 import api from './api';
+import { getTelegramInitData, isTelegramWebApp } from './telegramWebApp';
 
 export interface UserAddress {
   address: string;
@@ -27,6 +28,27 @@ export const signup = async (nickname: string, password: string): Promise<LoginR
   const response = await api.post('/auth/signup', { nickname, password });
   return response.data;
 };
+
+export const loginWithTelegram = async (initData: string): Promise<LoginResponse> => {
+  const response = await api.post('/auth/telegram', { initData });
+  return response.data;
+};
+
+/** Signs in with Telegram initData when opened inside the Mini App. Returns true if a token was saved. */
+export async function tryTelegramAutoLogin(): Promise<boolean> {
+  if (!isTelegramWebApp()) return false;
+
+  const initData = getTelegramInitData();
+  if (!initData) return false;
+
+  try {
+    const response = await loginWithTelegram(initData);
+    saveToken(response.access_token);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export const getProfile = async (): Promise<User> => {
   const response = await api.get('/auth/profile');

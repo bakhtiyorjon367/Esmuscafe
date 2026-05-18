@@ -57,12 +57,6 @@ const Home: React.FC = () => {
         </IonToolbar>
       </IonHeader>
       <IonContent fullscreen className="ion-padding">
-        <div className="ion-text-center ion-padding">
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', margin: 0 }}>Choose a restaurant</h1>
-          <p style={{ margin: '8px 0 0', color: 'var(--ion-color-medium)', fontSize: '0.9rem' }}>
-            Select a restaurant to browse the menu
-          </p>
-        </div>
         {loading && (
           <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 24 }}>
             <IonSpinner />

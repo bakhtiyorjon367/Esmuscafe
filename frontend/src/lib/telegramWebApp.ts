@@ -8,6 +8,14 @@ export interface TelegramUser {
   photo_url?: string;
 }
 
+export function isTelegramWebApp(): boolean {
+  return !!WebApp.initData;
+}
+
+export function getTelegramInitData(): string {
+  return WebApp.initData ?? '';
+}
+
 export function getTelegramUser(): TelegramUser | null {
   const user = WebApp.initDataUnsafe?.user;
   if (!user) {

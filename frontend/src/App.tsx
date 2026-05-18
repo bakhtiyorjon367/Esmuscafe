@@ -14,6 +14,7 @@ import Collection from './pages/Collection';
 import Category from './pages/Category';
 import RestaurantMain from './pages/RestaurantMain';
 import AuthGuard from './components/AuthGuard';
+import TelegramAuthBootstrap from './components/TelegramAuthBootstrap';
 import BottomNav from './components/BottomNav';
 import { CartProvider } from './context/CartContext';
 import { setCategoryRestaurantId } from './lib/categoryRestaurant';
@@ -130,11 +131,13 @@ const AppTabs: React.FC = () => (
 
 const App: React.FC = () => (
   <IonApp>
-    <IonReactRouter>
-      <CartProvider>
-        <AppTabs />
-      </CartProvider>
-    </IonReactRouter>
+    <TelegramAuthBootstrap>
+      <IonReactRouter>
+        <CartProvider>
+          <AppTabs />
+        </CartProvider>
+      </IonReactRouter>
+    </TelegramAuthBootstrap>
   </IonApp>
 );
 

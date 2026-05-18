@@ -71,8 +71,8 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant }) => {
                 {address || '—'}
               </span>
               {address && (
-                <button type="button" onClick={handleCopy} aria-label="Copy address" style={{ flexShrink: 0, padding: 4, background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <IonIcon icon={copyOutline} />
+                <button type="button" onClick={handleCopy} aria-label="Copy address" style={{ flexShrink: 0, padding: 6, background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <IonIcon icon={copyOutline} style={{ fontSize: 48 }} />
                 </button>
               )}
             </div>

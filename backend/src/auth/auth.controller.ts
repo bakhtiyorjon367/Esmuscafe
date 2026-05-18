@@ -2,6 +2,7 @@ import { Controller, Post, Body, Get, UseGuards } from '@nestjs/common';
 import { IsString, IsNotEmpty } from 'class-validator';
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
+import { TelegramAuthDto } from './dto/telegram-auth.dto';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
@@ -31,6 +32,11 @@ export class AuthController {
   @Post('signup')
   async signup(@Body() body: SignupDto) {
     return this.authService.signup(body.nickname, body.password);
+  }
+
+  @Post('telegram')
+  async telegram(@Body() body: TelegramAuthDto) {
+    return this.authService.loginWithTelegram(body.initData);
   }
 
   @Post('register')

@@ -1,7 +1,9 @@
+import { randomBytes } from 'crypto';
 import { Injectable, ConflictException, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import * as bcrypt from 'bcryptjs';
+import type { TelegramWebAppUser } from '../auth/telegram-init-data';
 import { User, UserDocument, UserAddress } from './schemas/user.schema';
 import { CreateUserDto } from './dto/create-user.dto';
 import { Role } from '../libs/enums/role.enum';
@@ -26,6 +28,46 @@ export class UsersService {
       password: hashedPassword,
     });
 
+    return createdUser.save();
+  }
+
+  async findByTelegramId(telegramId: string): Promise<UserDocument | null> {
+    const user = await this.userModel.findOne({ telegramId }).exec();
+    if (user && user.status === 'deleted') {
+      throw new ForbiddenException('This account has been deleted');
+    }
+    return user;
+  }
+
+  async findOrCreateFromTelegram(tgUser: TelegramWebAppUser): Promise<UserDocument> {
+    const telegramId = String(tgUser.id);
+    const existing = await this.findByTelegramId(telegramId);
+    if (existing) {
+      const displayName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
+      if (displayName && existing.name !== displayName) {
+        existing.name = displayName;
+        await existing.save();
+      }
+      return existing;
+    }
+
+    const displayName = [tgUser.first_name, tgUser.last_name].filter(Boolean).join(' ');
+    const baseNickname = tgUser.username?.replace(/[^a-zA-Z0-9_]/g, '') || `tg${telegramId}`;
+    let nickname = baseNickname;
+    let suffix = 0;
+    while (await this.userModel.findOne({ nickname }).exec()) {
+      suffix += 1;
+      nickname = `${baseNickname}${suffix}`;
+    }
+
+    const hashedPassword = await bcrypt.hash(randomBytes(32).toString('hex'), 10);
+    const createdUser = new this.userModel({
+      telegramId,
+      nickname,
+      name: displayName || nickname,
+      password: hashedPassword,
+      role: Role.USER,
+    });
     return createdUser.save();
   }
 
